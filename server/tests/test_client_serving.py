@@ -4,14 +4,32 @@ Verifies that the Flask production application factory serves the built modern
 React client application from client/dist while preserving all API endpoints.
 """
 
+import shutil
+from pathlib import Path
 import pytest
 from server.app import create_app
 
 @pytest.fixture
 def client():
+    client_dist = Path(__file__).resolve().parent.parent.parent / "client" / "dist"
+    index_file = client_dist / "index.html"
+    created_dist = False
+    created_index = False
+    if not client_dist.exists():
+        client_dist.mkdir(parents=True, exist_ok=True)
+        created_dist = True
+    if not index_file.exists():
+        index_file.write_text("<!DOCTYPE html><html><body><div id=\"root\"></div>CARspective</body></html>", encoding="utf-8")
+        created_index = True
+
     app = create_app({"TESTING": True})
     with app.test_client() as c:
         yield c
+
+    if created_index and index_file.exists():
+        index_file.unlink(missing_ok=True)
+    if created_dist and client_dist.exists():
+        shutil.rmtree(client_dist, ignore_errors=True)
 
 def test_client_index_served(client):
     res = client.get("/")

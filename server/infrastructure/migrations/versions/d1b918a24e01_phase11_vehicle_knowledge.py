@@ -33,8 +33,7 @@ def upgrade() -> None:
             sa.Column('category', sa.String(length=50), nullable=False),
             sa.Column('created_at', sa.DateTime(), nullable=False),
             sa.Column('updated_at', sa.DateTime(), nullable=False),
-            sa.PrimaryKeyConstraint('id'),
-            sa.UniqueConstraint('feature_key')
+            sa.PrimaryKeyConstraint('id')
         )
         op.create_index(op.f('ix_vehicle_features_feature_key'), 'vehicle_features', ['feature_key'], unique=True)
 
