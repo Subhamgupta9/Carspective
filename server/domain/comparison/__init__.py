@@ -1,0 +1,62 @@
+"""
+CARspective — Phase 6 Comparison Domain
+Provides canonical, evidence-aware, explainable 2-3 vehicle comparison engine.
+"""
+
+from .models import (
+    ComparisonMode,
+    CategoryWinnerStatus,
+    DifferenceSignificance,
+    OverallResultType,
+    EvidenceState,
+    ComparisonVehicle,
+    ComparisonListing,
+    ComparisonUserProfile,
+    ComparisonRequest,
+    SpecificationValue,
+    SpecificationComparison,
+    CategoryResult,
+    VehicleScoreSummary,
+    ScoreComparison,
+    VehicleValuationSummary,
+    ValuationComparison,
+    VehicleDealSummary,
+    DealComparison,
+    VehicleUserFitSummary,
+    UserFitComparison,
+    TradeOff,
+    BestForLabel,
+    VehicleResearchSummary,
+    OverallResult,
+    ComparisonResponse,
+)
+from .service import ComparisonService
+
+__all__ = [
+    "ComparisonMode",
+    "CategoryWinnerStatus",
+    "DifferenceSignificance",
+    "OverallResultType",
+    "EvidenceState",
+    "ComparisonVehicle",
+    "ComparisonListing",
+    "ComparisonUserProfile",
+    "ComparisonRequest",
+    "SpecificationValue",
+    "SpecificationComparison",
+    "CategoryResult",
+    "VehicleScoreSummary",
+    "ScoreComparison",
+    "VehicleValuationSummary",
+    "ValuationComparison",
+    "VehicleDealSummary",
+    "DealComparison",
+    "VehicleUserFitSummary",
+    "UserFitComparison",
+    "TradeOff",
+    "BestForLabel",
+    "VehicleResearchSummary",
+    "OverallResult",
+    "ComparisonResponse",
+    "ComparisonService",
+]

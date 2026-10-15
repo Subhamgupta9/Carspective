@@ -1,0 +1,25 @@
+{
+  "total_columns_evaluated": 11,
+  "evaluated_columns": [
+    "Unnamed: 0",
+    "price",
+    "manufacturing_year",
+    "model",
+    "km_driven",
+    "fuel_type",
+    "transmission_type",
+    "brand",
+    "city",
+    "bodytype",
+    "number_of_owners"
+  ],
+  "leakage_risks_detected": [],
+  "pipeline_leakage_rules": [
+    "1. 'price' and any derived values (e.g. price_per_km, depreciation_from_new) must NEVER be included as model inputs.",
+    "2. All categorical encoders (OneHotEncoder, TargetEncoder, OrdinalEncoder) must be fit STRICTLY on train fold.",
+    "3. All numerical scalers and imputers must be fit STRICTLY on train fold.",
+    "4. Feature engineering (vehicle_age = CURRENT_YEAR - manufacturing_year, log_km = log1p(km_driven)) uses only static row properties and zero target information.",
+    "5. User asking price in future Deal Analyzer features is completely isolated from Valuation Engine."
+  ],
+  "verdict": "ZERO LEAKAGE in candidate feature set ['brand', 'model', 'manufacturing_year', 'km_driven', 'fuel_type', 'transmission_type', 'city', 'bodytype', 'number_of_owners']."
+}

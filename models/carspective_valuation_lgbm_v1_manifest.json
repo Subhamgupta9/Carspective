@@ -1,0 +1,66 @@
+{
+  "model_id": "carspective-valuation-lgbm-v1",
+  "model_version": "carspective-val-v1.0.0",
+  "algorithm": "LightGBM Tuned Regressor",
+  "target_variable": "price",
+  "target_transformation": "log1p(price) with expm1 inverse transformation",
+  "target_semantic_concept": "Statistical Model Estimate of the Historical Market Asking-Price Baseline (NOT verified transaction price)",
+  "creation_timestamp": "2026-10-07T16:39:22.626309+00:00",
+  "dataset": {
+    "name": "indian_used_cars_raw_57480.csv",
+    "total_records": 57480,
+    "sha256_fingerprint": "a6a620dc6b8784acccacddc73754e070da9e48e8a2764c7c13e63d7c283941fe",
+    "split_strategy": "Random 80/20 train/test split (seed=42) verified by decile cross-validation"
+  },
+  "artifact": {
+    "file_name": "carspective_valuation_lgbm_v1.joblib",
+    "size_bytes": 2878243,
+    "size_mb": 2.74,
+    "sha256": "4a4ccf3f78c17b48826cfa55f40a24bcb808bc82fa752b793ad4eabff8b246c1"
+  },
+  "feature_schema": {
+    "numeric_features": [
+      "manufacturing_year",
+      "km_driven",
+      "number_of_owners",
+      "vehicle_age",
+      "log_km_driven"
+    ],
+    "categorical_features": [
+      "model",
+      "fuel_type",
+      "transmission_type",
+      "brand",
+      "city",
+      "bodytype"
+    ]
+  },
+  "evaluation_metrics": {
+    "r2": 0.8320164297196623,
+    "mae_inr": 134282.5209794583,
+    "medae_inr": 53257.6856836653,
+    "rmse_inr": 683796.7823504887,
+    "smape_percent": 14.13637452988178,
+    "within_10_percent": 51.235212247738346,
+    "within_20_percent": 77.66179540709813,
+    "inference_latency_ms": 15.386
+  },
+  "conformal_range_calibration": {
+    "nominal_80_percent_interval": {
+      "multiplier": 0.21783412194872057,
+      "empirical_coverage_percent": 80.04523312456506,
+      "formula": "predicted_value * (1.0 +/- 0.217834)"
+    },
+    "nominal_90_percent_interval": {
+      "multiplier": 0.3144798869046467,
+      "empirical_coverage_percent": 90.1356993736952,
+      "formula": "predicted_value * (1.0 +/- 0.314480)"
+    }
+  },
+  "environment": {
+    "python_version": "3.11.8",
+    "lightgbm_version": "4.7.0",
+    "scikit_learn_version": "1.9.1",
+    "joblib_version": "1.6.0"
+  }
+}

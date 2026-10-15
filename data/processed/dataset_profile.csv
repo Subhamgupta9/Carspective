@@ -1,0 +1,12 @@
+Column,Data Type,Unique Count,Unique Percentage
+Unnamed: 0,int64,57480,100.0
+km_driven,str,10502,18.27
+price,int64,3372,5.87
+city,str,1468,2.55
+model,str,1200,2.09
+brand,str,47,0.08
+manufacturing_year,int64,35,0.06
+bodytype,str,18,0.03
+fuel_type,str,9,0.02
+number_of_owners,int64,6,0.01
+transmission_type,str,8,0.01

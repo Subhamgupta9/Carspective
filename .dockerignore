@@ -1,0 +1,67 @@
+# ==============================================================================
+# CARspective — Docker Build Ignore Rules
+# Strictly prevents secrets, local databases, caches, backups, and dev artifacts
+# from entering the Docker build context.
+# ==============================================================================
+
+# Secrets, Environment Files & Keys
+.env
+.env.*
+*.pem
+*.key
+*.cert
+*.crt
+
+# Persistent Databases, Backups, and Snapshots
+data/database/*.db
+data/database/*.db*
+data/database/*.backup*
+data/database/*.snapshot*
+data/database/*.pre_cleanup*
+*.db
+*.sqlite
+*.sqlite3
+backup_*/
+
+# Git & IDE Artifacts
+.git/
+.gitignore
+.gitattributes
+.github/
+.agent/
+.agents/
+.gemini/
+.gsd/
+.vscode/
+.idea/
+
+# Python Virtual Environments, Bytecode & Caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Node.js & Frontend Development Artifacts
+client/node_modules/
+client/.vite/
+client/coverage/
+client/dist/
+
+# Scratch & Developer Working Files
+scratch/
+scratch_*.txt
+*.tmp
+*.log
+*.png
+*.glb
+extracted_texture.png
+cleaned_test.png
+extract_texture.py
+inspect_glb.py

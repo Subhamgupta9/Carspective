@@ -1,0 +1,20 @@
+{
+  "strategy_a_random_80_20": {
+    "description": "Standard independent 80/20 random split (45,984 train / 11,496 test).",
+    "train_size": 45984,
+    "test_size": 11496,
+    "justification": "Ensures full representation of rare regional and vehicle model combinations across India while preventing temporal leakage."
+  },
+  "strategy_b_price_stratified": {
+    "description": "Decile price-stratified 80/20 split.",
+    "train_size": 45984,
+    "test_size": 11496,
+    "justification": "Guarantees identical representation of ultra-luxury exotics (Bugatti, Lamborghini) in both train and test."
+  },
+  "strategy_c_temporal_audit": {
+    "description": "Assessment of temporal splitting feasibility.",
+    "finding": "The raw dataset provides manufacturing_year (1989-2025) but lacks listing timestamp / scraped date.",
+    "verdict": "Manufacturing year is a fundamental depreciation feature, NOT a valid time-series index. Manufacturing temporal splits would artificially prevent the model from learning older car valuations."
+  },
+  "selected_production_strategy": "Strategy A (Random 80/20 Split with Seed 42) + Decile Cross-Validation verification. This directly preserves compatibility with legacy benchmark baseline for transparent comparison."
+}

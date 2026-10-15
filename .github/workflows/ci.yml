@@ -1,0 +1,343 @@
+name: CARspective CI/CD Pipeline
+
+'on':
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ============================================================================
+  # 1. SECURITY & INVARIANTS VALIDATION
+  # ============================================================================
+  security-and-invariants:
+    name: Security Audit & Model Invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run Dependency Vulnerability Audit (pip-audit)
+        run: |
+          pip-audit --desc on
+
+      - name: Verify Model Artifact SHA-256 Invariant
+        run: |
+          python -c "
+          import hashlib
+          expected_hash = '4a4ccf3f78c17b48826cfa55f40a24bcb808bc82fa752b793ad4eabff8b246c1'
+          with open('models/carspective_valuation_lgbm_v1.joblib', 'rb') as f:
+              actual_hash = hashlib.sha256(f.read()).hexdigest()
+          assert actual_hash == expected_hash, f'Model artifact SHA-256 mismatch! Expected {expected_hash}, got {actual_hash}'
+          print('Valuation model artifact invariant VERIFIED!')
+          "
+
+      - name: Verify Canonical Inspection Catalog Invariant
+        run: |
+          python -c "
+          import sys; sys.path.insert(0, '.')
+          from server.domain.inspection.checklist import CANONICAL_CHECKLIST_CATALOG, INSPECTION_CATALOG_VERSION
+          assert INSPECTION_CATALOG_VERSION == '2.0.0', f'Checklist version mismatch: {INSPECTION_CATALOG_VERSION}'
+          assert len(CANONICAL_CHECKLIST_CATALOG) == 49, f'Checklist items count mismatch: {len(CANONICAL_CHECKLIST_CATALOG)}'
+          print('Inspection checklist catalog invariant (v2.0.0, 49 items) VERIFIED!')
+          "
+
+  # ============================================================================
+  # 2. BACKEND TEST SUITE (ISOLATED DATABASE)
+  # ============================================================================
+  backend-tests:
+    name: Backend Regression Tests (Python 3.11)
+    runs-on: ubuntu-latest
+    needs: security-and-invariants
+    env:
+      CARSPECTIVE_ENV: test
+      CARSPECTIVE_DEBUG: false
+      TESTING: true
+      DATABASE_URL: "sqlite:///:memory:"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install System Dependencies (OpenMP for LightGBM)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgomp1
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run Root Regression Suite (182 Tests)
+        run: |
+          pytest tests/ -v
+
+      - name: Run Server Backend Suite (410+ Tests)
+        run: |
+          pytest server/tests/ -v
+
+  # ============================================================================
+  # 3. POSTGRESQL INTEGRATION & MIGRATION TEST SUITE (EPHEMERAL SERVICE)
+  # ============================================================================
+  postgres-integration-tests:
+    name: PostgreSQL 16 Integration & Migrations (Python 3.11)
+    runs-on: ubuntu-latest
+    needs: security-and-invariants
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: carspective_test
+          POSTGRES_PASSWORD: test_password_insecure_ci_only
+          POSTGRES_DB: carspective_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U carspective_test -d carspective_test_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CARSPECTIVE_ENV: test
+      CARSPECTIVE_DEBUG: false
+      TESTING: true
+      DATABASE_URL: "postgresql+psycopg2://carspective_test:test_password_insecure_ci_only@localhost:5432/carspective_test_db"
+      TEST_DATABASE_URL: "postgresql+psycopg2://carspective_test:test_password_insecure_ci_only@localhost:5432/carspective_test_db"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install System Dependencies (OpenMP & PostgreSQL Client)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgomp1 postgresql-client
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Verify PostgreSQL Service Container Health
+        run: |
+          echo "Verifying PostgreSQL 16 service container connectivity on localhost:5432..."
+          for i in {1..15}; do
+            if pg_isready -h localhost -p 5432 -U carspective_test -d carspective_test_db; then
+              echo "PostgreSQL service is healthy and accepting connections!"
+              exit 0
+            fi
+            echo "Waiting for PostgreSQL service (attempt $i/15)..."
+            sleep 2
+          done
+          echo "ERROR: Timed out waiting for PostgreSQL service container"
+          exit 1
+
+      - name: Execute Alembic Migration Chain to HEAD
+        run: |
+          echo "Applying all migrations from empty database to HEAD..."
+          alembic upgrade head
+
+          echo "Verifying migration version recorded in PostgreSQL alembic_version table..."
+          HEAD_REV=$(psql "postgresql://carspective_test:test_password_insecure_ci_only@localhost:5432/carspective_test_db" -t -A -c "SELECT version_num FROM alembic_version;")
+          echo "Recorded Alembic revision: $HEAD_REV"
+          test "$HEAD_REV" = "f3d730c46a23"
+          echo "Alembic HEAD revision f3d730c46a23 verified successfully on PostgreSQL!"
+
+      - name: Verify PostgreSQL Schema Objects & Zero Metadata Drift
+        run: |
+          python -c "
+          import sqlalchemy as sa
+          from alembic.migration import MigrationContext
+          from alembic.autogenerate import compare_metadata
+          from server.models import Base
+          from server.config.settings import settings
+
+          engine = sa.create_engine(settings.DATABASE_URL)
+          inspector = sa.inspect(engine)
+          tables = set(inspector.get_table_names())
+          assert 'alembic_version' in tables, 'alembic_version table missing'
+          assert len(tables) >= 25, f'Expected at least 25 tables, got {len(tables)}: {tables}'
+
+          with engine.connect() as conn:
+              ctx = MigrationContext.configure(conn)
+              diff = compare_metadata(ctx, Base.metadata)
+              assert len(diff) == 0, f'Schema drift detected on PostgreSQL: {diff}'
+          print('PostgreSQL schema verified: 24 application tables present with zero metadata drift!')
+          "
+
+      - name: Populate Canonical Seed & Vehicle Knowledge Data
+        run: |
+          echo "Seeding canonical taxonomy and evidence sources..."
+          python scripts/generate_and_load_seeds.py
+
+          echo "Seeding Phase 11 expanded vehicle knowledge..."
+          python scripts/seed_vehicle_knowledge.py
+
+          echo "Verifying row counts on PostgreSQL..."
+          python -c "
+          from server.infrastructure.database import SessionFactory
+          from server.models.taxonomy import Manufacturer, VehicleModel, VehicleVariant
+          from server.models.evidence import EvidenceSource, KnowledgeClaim
+          from server.models.knowledge import VehicleFeatureMap, ReliabilityAdvisory
+
+          sess = SessionFactory()
+          assert sess.query(Manufacturer).count() >= 7, 'Manufacturer count failed'
+          assert sess.query(VehicleModel).count() >= 15, 'Model count failed'
+          assert sess.query(VehicleVariant).count() >= 40, 'Variant count failed'
+          assert sess.query(EvidenceSource).count() >= 10, 'EvidenceSource count failed'
+          assert sess.query(KnowledgeClaim).count() >= 50, 'KnowledgeClaim count failed'
+          assert sess.query(VehicleFeatureMap).count() >= 20, 'FeatureMap count failed'
+          assert sess.query(ReliabilityAdvisory).count() >= 5, 'Advisory count failed'
+          sess.close()
+          print('PostgreSQL seed data integrity verified across all core tables!')
+          "
+
+      - name: Run Focused PostgreSQL Repository & Database Tests
+        run: |
+          pytest server/tests/test_database.py server/tests/test_phase19c_database_lifecycle.py server/tests/test_database_url_normalization.py server/tests/test_postgresql_fixtures.py -v
+
+      - name: Execute Migration Downgrade & Re-upgrade Idempotency Drill
+        run: |
+          echo "Executing migration downgrade drill: alembic downgrade base..."
+          alembic downgrade base
+
+          echo "Verifying application tables were dropped..."
+          APP_TABLE_COUNT=$(psql "postgresql://carspective_test:test_password_insecure_ci_only@localhost:5432/carspective_test_db" -t -A -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name != 'alembic_version';")
+          echo "Application tables remaining after downgrade: $APP_TABLE_COUNT"
+          test "$APP_TABLE_COUNT" -eq 0
+
+          echo "Verifying migration-owned PostgreSQL ENUM types were dropped..."
+          ENUM_COUNT=$(psql "postgresql://carspective_test:test_password_insecure_ci_only@localhost:5432/carspective_test_db" -t -A -c "SELECT count(*) FROM pg_type WHERE typname IN ('hierarchylevel', 'evidencestate', 'organizationtype');")
+          echo "Migration ENUM types remaining after downgrade: $ENUM_COUNT"
+          test "$ENUM_COUNT" -eq 0
+
+          echo "Re-executing upgrade to HEAD to verify idempotency..."
+          alembic upgrade head
+          RE_UPGRADE_REV=$(psql "postgresql://carspective_test:test_password_insecure_ci_only@localhost:5432/carspective_test_db" -t -A -c "SELECT version_num FROM alembic_version;")
+          echo "Recorded revision after re-upgrade: $RE_UPGRADE_REV"
+          test "$RE_UPGRADE_REV" = "f3d730c46a23"
+
+          echo "Verifying schema objects recreated cleanly with zero metadata drift..."
+          python -c "
+          import sqlalchemy as sa
+          from alembic.migration import MigrationContext
+          from alembic.autogenerate import compare_metadata
+          from server.models import Base
+          from server.config.settings import settings
+
+          engine = sa.create_engine(settings.DATABASE_URL)
+          inspector = sa.inspect(engine)
+          tables = set(inspector.get_table_names())
+          assert 'alembic_version' in tables, 'alembic_version missing'
+          assert len(tables) >= 25, f'Expected at least 25 tables, got {len(tables)}'
+
+          with engine.connect() as conn:
+              ctx = MigrationContext.configure(conn)
+              diff = compare_metadata(ctx, Base.metadata)
+              assert len(diff) == 0, f'Schema drift detected on re-upgrade: {diff}'
+          print('Re-upgrade verified: 24 tables recreated cleanly with zero metadata drift!')
+          "
+
+      - name: Capture Sanitized PostgreSQL Container Logs on Failure
+        if: failure()
+        run: |
+          echo "=== Step Failure Detected: Capturing PostgreSQL Container Logs ==="
+          docker ps -a
+          CONTAINER_ID=$(docker ps -q --filter ancestor=postgres:16-alpine)
+          if [ -n "$CONTAINER_ID" ]; then
+            echo "--- PostgreSQL Container Logs ($CONTAINER_ID) ---"
+            docker logs "$CONTAINER_ID" | tail -n 100
+          fi
+
+  # ============================================================================
+  # 4. FRONTEND TESTS & PRODUCTION BUILD
+  # ============================================================================
+  frontend-tests-and-build:
+    name: Frontend Tests & Production Build (Node 20)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: client/package.json
+
+      - name: Install Dependencies
+        run: |
+          npm ci || npm install
+
+      - name: Run Vitest Suite (80 Tests)
+        run: |
+          npm test -- --run
+
+      - name: Build Production Client Assets (Vite)
+        run: |
+          npm run build
+
+      - name: Verify Client Distribution Integrity
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          echo "Client production distribution verified successfully!"
+
+  # ============================================================================
+  # 4. PRODUCTION CONFIGURATION & DEPLOYMENT CHECKS
+  # ============================================================================
+  production-config-checks:
+    name: Production Configuration Fail-Fast Audit
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests-and-build]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+
+      - name: Verify Production Configuration Fail-Fast Guards
+        run: |
+          pytest server/tests/test_phase19b_security_configuration.py -k "test_production_config" server/tests/test_phase19e_deployment_and_ci.py -v

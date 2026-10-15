@@ -1,0 +1,164 @@
+{
+  "dataset_metadata": {
+    "name": "Indian Used Cars Historical Dataset",
+    "nature": "Historical seller asking-price listing baseline (NOT verified transaction prices)",
+    "filepath": "data\\raw\\indian_used_cars_raw_57480.csv",
+    "file_size_bytes": 4789654,
+    "sha256": "a6a620dc6b8784acccacddc73754e070da9e48e8a2764c7c13e63d7c283941fe",
+    "immutable": true
+  },
+  "shape": {
+    "total_rows": 57480,
+    "total_columns": 11,
+    "column_names": [
+      "Unnamed: 0",
+      "price",
+      "manufacturing_year",
+      "model",
+      "km_driven",
+      "fuel_type",
+      "transmission_type",
+      "brand",
+      "city",
+      "bodytype",
+      "number_of_owners"
+    ]
+  },
+  "missingness": {
+    "counts": {
+      "Unnamed: 0": 0,
+      "price": 0,
+      "manufacturing_year": 0,
+      "model": 0,
+      "km_driven": 0,
+      "fuel_type": 28,
+      "transmission_type": 0,
+      "brand": 0,
+      "city": 0,
+      "bodytype": 0,
+      "number_of_owners": 0
+    },
+    "percentages": {
+      "Unnamed: 0": 0.0,
+      "price": 0.0,
+      "manufacturing_year": 0.0,
+      "model": 0.0,
+      "km_driven": 0.0,
+      "fuel_type": 0.0487,
+      "transmission_type": 0.0,
+      "brand": 0.0,
+      "city": 0.0,
+      "bodytype": 0.0,
+      "number_of_owners": 0.0
+    }
+  },
+  "duplicates": {
+    "exact_duplicate_rows": 0,
+    "listing_pattern_duplicates": 0
+  },
+  "cardinality": {
+    "brands_count": 47,
+    "models_count": 1200,
+    "fuel_types": {
+      "Petrol": 33573,
+      "Diesel": 21079,
+      "CNG": 1858,
+      "Electric": 589,
+      "LPG": 171,
+      "Hybrid (Electric + Petrol)": 146,
+      "NaN": 28,
+      "Mild Hybrid(Electric + Petrol)": 24,
+      "Mild Hybrid (Electric + Diesel)": 10,
+      "Plug-in Hybrid (Electric + Petrol)": 2
+    },
+    "transmission_types": {
+      "Manual": 43361,
+      "Automatic": 9942,
+      "Automatic (TC)": 2052,
+      "Automatic (DCT)": 728,
+      "Automatic (AMT)": 688,
+      "Automatic (CVT)": 481,
+      "Clutchless Manual (IMT)": 124,
+      "Automatic (e-CVT)": 104
+    },
+    "owner_types": {
+      "1": 39385,
+      "2": 12481,
+      "3": 3752,
+      "4": 843,
+      "5": 673,
+      "6": 346
+    },
+    "malformed_bodytypes": [
+      "15"
+    ]
+  },
+  "anomalies_and_boundaries": {
+    "zero_or_negative_price": 0,
+    "sub_10k_price": 0,
+    "hyper_luxury_price_gt_1cr": 282,
+    "unparseable_km": 0,
+    "negative_km": 0,
+    "extreme_high_km_gt_1m": 72,
+    "suspicious_high_km_gt_500k": 113,
+    "future_manufacturing_year": 0,
+    "ancient_manufacturing_year_lt_1980": 0,
+    "suspicious_vintage_lt_2000": 41
+  },
+  "target_distribution_inr": {
+    "min": 15000.0,
+    "max": 200000000.0,
+    "mean": 996082.54,
+    "median": 550000.0,
+    "std": 1832278.33,
+    "skewness": 28.3667,
+    "kurtosis": 2541.8784,
+    "percentiles": {
+      "p01": 70000.0,
+      "p05": 140000.0,
+      "p10": 200000.0,
+      "p25": 340000.0,
+      "p50": 550000.0,
+      "p75": 988916.0,
+      "p90": 1845000.0,
+      "p95": 3450000.0,
+      "p99": 8300000.0
+    }
+  },
+  "usable_accounting": {
+    "total_raw_records": 57480,
+    "usable_records": 57400,
+    "filtered_out_records": 80,
+    "usable_percentage": 99.86
+  },
+  "transformations_audit": [
+    {
+      "step": "Price target validation",
+      "rule": "Filter price > INR 20,000 and <= INR 5,00,00,000 (0.2L to 500L)",
+      "reason": "Remove invalid zero/scrap entries and unrealistic extreme outliers",
+      "affected_rows": 4,
+      "resulting_behavior": "Prevents catastrophic distortion of root mean squared error baseline"
+    },
+    {
+      "step": "Manufacturing year boundary",
+      "rule": "Restrict manufacturing_year between 1995 and 2026",
+      "reason": "Used car pricing models evaluate modern registration era (< 30 years old)",
+      "affected_rows": 4,
+      "resulting_behavior": "Excludes pre-OBD antique records with non-standard market pricing"
+    },
+    {
+      "step": "Odometer km sanity check",
+      "rule": "km_driven between 0 and 1,000,000 km",
+      "reason": "Odometer fraud or typo values exceeding 1 million km represent recording glitches",
+      "affected_rows": 72,
+      "resulting_behavior": "Maintains linear and monotonic depreciation curve"
+    },
+    {
+      "step": "Canonical text normalization",
+      "rule": "Lower-case and strip brand, model, fuel_type, transmission_type, bodytype",
+      "reason": "Harmonize inconsistent casing and trailing whitespace across aggregator sources",
+      "affected_rows": 57480,
+      "resulting_behavior": "Consistent mapping to Phase 2 Canonical Vehicle Taxonomy"
+    }
+  ]
+}

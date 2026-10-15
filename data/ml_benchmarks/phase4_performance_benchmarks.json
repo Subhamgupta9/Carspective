@@ -1,0 +1,16 @@
+{
+  "cold_request_ms": 210.84,
+  "api_endpoint_percentiles": {
+    "min_ms": 15.58,
+    "p50_ms": 17.51,
+    "p90_ms": 22.74,
+    "p95_ms": 24.28,
+    "p99_ms": 26.69,
+    "mean_ms": 19.26
+  },
+  "component_breakdown_medians": {
+    "taxonomy_resolution_p50_ms": 1.91,
+    "ml_valuation_p50_ms": 16.08,
+    "deal_logic_and_serialization_approx_ms": 1.43
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "candidate_features": [
+    "Unnamed: 0",
+    "manufacturing_year",
+    "model",
+    "km_driven",
+    "fuel_type",
+    "transmission_type",
+    "brand",
+    "city",
+    "bodytype",
+    "number_of_owners"
+  ],
+  "feature_details": {
+    "Unnamed: 0": {
+      "data_type": "int64",
+      "semantic_type": "OTHER",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 57480,
+      "predictive_usefulness": "UNKNOWN",
+      "preprocessing_strategy": "None",
+      "leakage_risk": "NONE"
+    },
+    "manufacturing_year": {
+      "data_type": "int64",
+      "semantic_type": "NUMERIC_DISCRETE",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 35,
+      "predictive_usefulness": "CRITICAL (Primary depreciation determinant)",
+      "preprocessing_strategy": "Cast to int, compute vehicle_age = CURRENT_YEAR - year, median imputation on train fold.",
+      "leakage_risk": "NONE"
+    },
+    "model": {
+      "data_type": "str",
+      "semantic_type": "CATEGORICAL_HIGH_CARDINALITY",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 1200,
+      "predictive_usefulness": "CRITICAL (Vehicle market segment and base pricing anchor)",
+      "preprocessing_strategy": "Trim, normalize brand prefix, min_frequency filtering or target encoding fitted on train.",
+      "leakage_risk": "NONE"
+    },
+    "km_driven": {
+      "data_type": "str",
+      "semantic_type": "NUMERIC_CONTINUOUS",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 10502,
+      "predictive_usefulness": "HIGH (Direct indicator of vehicle mechanical wear & depreciation)",
+      "preprocessing_strategy": "Strip commas, cast to float, create log1p(km_driven), median imputation on train fold.",
+      "leakage_risk": "NONE"
+    },
+    "fuel_type": {
+      "data_type": "str",
+      "semantic_type": "CATEGORICAL_LOW_CARDINALITY",
+      "missing_count": 28,
+      "missing_percentage": 0.0487,
+      "cardinality": 9,
+      "predictive_usefulness": "HIGH (Running economy and residual resale dynamics in India)",
+      "preprocessing_strategy": "Trim, most-frequent imputation, one-hot encode.",
+      "leakage_risk": "NONE"
+    },
+    "transmission_type": {
+      "data_type": "str",
+      "semantic_type": "CATEGORICAL_BINARY",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 8,
+      "predictive_usefulness": "HIGH (Automatic commands significant market premium in urban India)",
+      "preprocessing_strategy": "Trim, one-hot encode.",
+      "leakage_risk": "NONE"
+    },
+    "brand": {
+      "data_type": "str",
+      "semantic_type": "CATEGORICAL_LOW_CARDINALITY",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 47,
+      "predictive_usefulness": "HIGH (Brand premium, reliability perception, market volume)",
+      "preprocessing_strategy": "Trim, lowercase, one-hot encode.",
+      "leakage_risk": "NONE"
+    },
+    "city": {
+      "data_type": "str",
+      "semantic_type": "CATEGORICAL_MEDIUM_CARDINALITY",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 1468,
+      "predictive_usefulness": "MODERATE (State road tax variance, regional demand preferences)",
+      "preprocessing_strategy": "Trim, one-hot encode.",
+      "leakage_risk": "NONE"
+    },
+    "bodytype": {
+      "data_type": "str",
+      "semantic_type": "CATEGORICAL_LOW_CARDINALITY",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 18,
+      "predictive_usefulness": "HIGH (SUV vs Hatchback vs Sedan price band differentiation)",
+      "preprocessing_strategy": "Sanitize malformed '15' entry, most-frequent imputation, one-hot encode.",
+      "leakage_risk": "NONE"
+    },
+    "number_of_owners": {
+      "data_type": "int64",
+      "semantic_type": "NUMERIC_ORDINAL",
+      "missing_count": 0,
+      "missing_percentage": 0.0,
+      "cardinality": 6,
+      "predictive_usefulness": "HIGH (Title dilution and subsequent resale penalty)",
+      "preprocessing_strategy": "Cast to int, median imputation on train fold.",
+      "leakage_risk": "NONE"
+    }
+  },
+  "engineered_features": {
+    "vehicle_age": {
+      "formula": "CURRENT_YEAR (2026) - manufacturing_year",
+      "semantic": "Years since manufacture; linear & non-linear proxy for asset depreciation.",
+      "leakage_risk": "NONE"
+    },
+    "log_km_driven": {
+      "formula": "log1p(km_driven)",
+      "semantic": "Logarithmic transform dampens impact of extreme high mileage outliers.",
+      "leakage_risk": "NONE"
+    }
+  }
+}

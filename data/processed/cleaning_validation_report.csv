@@ -1,0 +1,12 @@
+Column,Original dtype,Cleaned dtype,Original missing,Cleaned missing,Original unique count,Cleaned unique count
+Unnamed: 0,int64,Removed,0,,57480,
+price,int64,int64,0,0,3372,3372
+manufacturing_year,int64,int64,0,0,35,35
+model,str,str,0,0,1200,1200
+km_driven,str,Int64,0,0,10502,9622
+fuel_type,str,str,28,0,9,10
+transmission_type,str,str,0,0,8,8
+brand,str,str,0,0,47,47
+city,str,str,0,0,1468,1468
+bodytype,str,str,0,0,18,18
+number_of_owners,int64,int64,0,0,6,6

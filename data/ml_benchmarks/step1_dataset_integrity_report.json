@@ -1,0 +1,90 @@
+{
+  "dataset_path": "data\\raw\\indian_used_cars_raw_57480.csv",
+  "total_rows": 57480,
+  "total_columns": 11,
+  "columns": [
+    "Unnamed: 0",
+    "price",
+    "manufacturing_year",
+    "model",
+    "km_driven",
+    "fuel_type",
+    "transmission_type",
+    "brand",
+    "city",
+    "bodytype",
+    "number_of_owners"
+  ],
+  "target_column": "price",
+  "data_types": {
+    "Unnamed: 0": "int64",
+    "price": "int64",
+    "manufacturing_year": "int64",
+    "model": "str",
+    "km_driven": "str",
+    "fuel_type": "str",
+    "transmission_type": "str",
+    "brand": "str",
+    "city": "str",
+    "bodytype": "str",
+    "number_of_owners": "int64"
+  },
+  "missing_counts": {
+    "Unnamed: 0": 0,
+    "price": 0,
+    "manufacturing_year": 0,
+    "model": 0,
+    "km_driven": 0,
+    "fuel_type": 28,
+    "transmission_type": 0,
+    "brand": 0,
+    "city": 0,
+    "bodytype": 0,
+    "number_of_owners": 0
+  },
+  "missing_percentages": {
+    "Unnamed: 0": 0.0,
+    "price": 0.0,
+    "manufacturing_year": 0.0,
+    "model": 0.0,
+    "km_driven": 0.0,
+    "fuel_type": 0.0487,
+    "transmission_type": 0.0,
+    "brand": 0.0,
+    "city": 0.0,
+    "bodytype": 0.0,
+    "number_of_owners": 0.0
+  },
+  "exact_duplicates": 0,
+  "listing_pattern_duplicates": 0,
+  "impossible_values": {
+    "negative_or_zero_price": 0,
+    "negative_km": 0,
+    "future_manufacturing_year": 0,
+    "pre_1980_manufacturing_year": 0,
+    "unparseable_km_values": 0
+  },
+  "malformed_categories": {
+    "bodytypes_numeric_or_suspicious": [
+      "15"
+    ]
+  },
+  "price_summary": {
+    "min": 15000.0,
+    "max": 200000000.0,
+    "mean": 996082.5436499652,
+    "median": 550000.0,
+    "std": 1832278.3332336568
+  },
+  "year_summary": {
+    "min": 1989,
+    "max": 2025,
+    "median": 2018
+  },
+  "mileage_summary": {
+    "min": 2.0,
+    "max": 3750000.0,
+    "median": 63000.0,
+    "mean": 72688.27164231037
+  }
+}

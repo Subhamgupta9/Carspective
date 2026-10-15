@@ -1,0 +1,165 @@
+{
+  "target_name": "price",
+  "semantic_meaning": "Seller asking / listing price in historical Indian used-car marketplace records (NOT verified transaction price)",
+  "count": 57480,
+  "min": 15000.0,
+  "max": 200000000.0,
+  "mean": 996082.5436499652,
+  "median": 550000.0,
+  "std": 1832278.3332336568,
+  "percentiles": {
+    "p1": 70000.0,
+    "p5": 140000.0,
+    "p10": 200000.0,
+    "p25": 340000.0,
+    "p50": 550000.0,
+    "p75": 988916.0,
+    "p90": 1845000.0,
+    "p95": 3450000.0,
+    "p99": 8300000.0,
+    "p99.5": 10000000.0,
+    "p99.9": 15500000.0
+  },
+  "skewness": {
+    "raw_price": 28.3667200081219,
+    "log1p_price": 0.4371068434165927,
+    "interpretation": "Raw price has extreme positive skew (28.37); log1p transformation substantially normalizes distribution (0.44)."
+  },
+  "kurtosis": {
+    "raw_price": 2541.878357889434,
+    "log1p_price": 0.9326707207767329
+  },
+  "iqr_analysis": {
+    "q25": 340000.0,
+    "q75": 988916.0,
+    "iqr": 648916.0,
+    "upper_whisker_1_5_iqr": 1962290.0,
+    "extreme_whisker_3_0_iqr": 2935664.0,
+    "outlier_count_1_5_iqr": 5223,
+    "outlier_count_3_0_iqr": 3362
+  },
+  "top_10_expensive": [
+    {
+      "brand": "Bugatti",
+      "model": "Bugatti Divo",
+      "manufacturing_year": 2019,
+      "price": 200000000
+    },
+    {
+      "brand": "Lamborghini",
+      "model": "Lamborghini Revuelto",
+      "manufacturing_year": 2025,
+      "price": 84122111
+    },
+    {
+      "brand": "Rolls-Royce",
+      "model": "Ghost Series II",
+      "manufacturing_year": 2017,
+      "price": 46000000
+    },
+    {
+      "brand": "Lamborghini",
+      "model": "Urus [2018]",
+      "manufacturing_year": 2021,
+      "price": 45000000
+    },
+    {
+      "brand": "Lamborghini",
+      "model": "Urus [2018]",
+      "manufacturing_year": 2021,
+      "price": 42100000
+    },
+    {
+      "brand": "Land Rover",
+      "model": "Land Rover Range Rover",
+      "manufacturing_year": 2023,
+      "price": 35000000
+    },
+    {
+      "brand": "Lamborghini",
+      "model": "Huracan Evo",
+      "manufacturing_year": 2019,
+      "price": 34900000
+    },
+    {
+      "brand": "Mercedes-Benz",
+      "model": "Mercedes-Benz AMG G 63",
+      "manufacturing_year": 2023,
+      "price": 34500000
+    },
+    {
+      "brand": "Lexus",
+      "model": "LM",
+      "manufacturing_year": 2025,
+      "price": 29500000
+    },
+    {
+      "brand": "Lexus",
+      "model": "LM",
+      "manufacturing_year": 2025,
+      "price": 29500000
+    }
+  ],
+  "bottom_10_cheapest": [
+    {
+      "brand": "Mitsubishi",
+      "model": "Mitsubishi Lancer",
+      "manufacturing_year": 2004,
+      "price": 15000
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti Esteem",
+      "manufacturing_year": 2002,
+      "price": 20000
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti 800",
+      "manufacturing_year": 2006,
+      "price": 22000
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti 800",
+      "manufacturing_year": 2005,
+      "price": 25000
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti Alto 800",
+      "manufacturing_year": 2006,
+      "price": 25000
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti Swift Dzire",
+      "manufacturing_year": 2010,
+      "price": 25000
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti 800",
+      "manufacturing_year": 1996,
+      "price": 26675
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti Alto 800",
+      "manufacturing_year": 2005,
+      "price": 28000
+    },
+    {
+      "brand": "Maruti",
+      "model": "Maruti Alto 800",
+      "manufacturing_year": 2005,
+      "price": 29000
+    },
+    {
+      "brand": "Hyundai",
+      "model": "Hyundai Santro Xing",
+      "manufacturing_year": 2003,
+      "price": 30000
+    }
+  ]
+}

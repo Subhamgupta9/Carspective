@@ -1,0 +1,7 @@
+Column,Action,Reason,Validation
+Unnamed: 0,Removed from df_clean,Exact duplicate of raw DataFrame index,Column absent from df_clean; raw retained
+km_driven,Strict comma-aware numeric parsing,Text-form numeric values; all valid after inspection,0 parsing failures; non-negative; non-null count retained
+fuel_type,Filled missing values with Unknown,Approved explicit missing-category treatment,Only original null rows changed; remaining nulls=0
+price,No change,Target values and high-price observations retained,Exact equality with raw column
+manufacturing_year,No change,Old records retained for future investigation,Exact equality with raw column
+Other categorical fields,No change,No approved mappings,Exact equality checks

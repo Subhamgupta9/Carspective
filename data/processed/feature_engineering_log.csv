@@ -1,0 +1,10 @@
+Feature,Decision,Reason,Evidence,Risk,Implementation Status
+vehicle_age,ENGINEER,Deterministic year-derived measure,1989–2025 observed years; explicit 2025 reference,Reference-year assumption,Implemented
+log_km_driven,ENGINEER,Right-tailed kilometres observed in EDA,"2–3,750,000 km range",Interpretation differs from original scale,Implemented
+fuel_transmission_type,ENGINEER,Limited low-dimensional categorical interaction,Observed category structure,Sparse combinations,Implemented
+price log transform,DEFER,Potential future target strategy,Strong right-tailed price distribution,Target-scale decision needs validation,Not implemented
+model/city encodings,DEFER,High cardinality,"1,200 models; 1,468 cities",Leakage/rare/unseen labels,Not implemented
+target encoding,DEFER,Must be fold-safe,Target-derived feature risk,Leakage,Not implemented
+brand × model,DEFER,Potential near-redundancy,High-cardinality components,Feature-space growth,Not implemented
+city × model,EXCLUDE,Very large interaction space,"1,468 × 1,200 theoretical combinations",Sparsity/overfitting,Not implemented
+number_of_owners,KEEP,Observed valid values 1–6,Complete source feature,Treatment form unresolved,Retained unchanged

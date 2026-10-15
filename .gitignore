@@ -1,0 +1,75 @@
+# ==============================================================================
+# CARspective — Version Control Ignore Rules
+# ==============================================================================
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv/
+env/
+venv/
+
+# Node / Frontend artifacts
+client/dist/
+client/node_modules/
+client/.vite/
+client/coverage/
+node_modules/
+.npm
+
+# Persistent Databases, Backups, and Snapshots
+data/database/*.db
+data/database/*.db*
+data/database/*.backup*
+data/database/*.snapshot*
+data/database/*.pre_cleanup*
+data/database/*.safety_backup
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+backup_*/
+*.bak
+
+# Ephemeral Benchmarks & Load Drill Artifacts
+data/phase20_load_drill/
+*.log
+*.tmp
+
+# Scratch & Developer Working Files
+scratch/
+scratch_*
+cleaned_test.png
+extracted_texture.png
+extract_texture.py
+inspect_glb.py
+
+# Large Offline Model Artifacts & Duplicates (>100MB GitHub limit)
+models/smart_used_car_price_model.pkl
+models/candidates/
+notebooks/models/
+notebooks/Projects/
+
+# IDE & Assistant Metadata
+.agent/
+.agents/
+.gemini/
+.gsd/
+.vscode/
+.idea/

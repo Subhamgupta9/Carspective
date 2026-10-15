@@ -1,0 +1,6 @@
+Column,Issue,Observed Evidence,Rows Affected,Severity,Action Required
+price,Very wide upper-tail distribution,"Minimum=15,000; 99.9th percentile=15,500,000; maximum=200,000,000.",56,Requires investigation,Needs investigation
+km_driven,Numeric-looking values stored as text,dtype=str; temporary comma-removal parse failures=0.,57480,Requires investigation,Needs investigation
+fuel_type,Missing values,Missing count=28 (0.05%).,28,Requires investigation,Needs investigation
+Unnamed: 0,Index-like duplicate of DataFrame index,"Unique=57,480; sequential from zero=True; duplicates DataFrame index=True.",57480,Requires investigation,Needs investigation
+manufacturing_year,Oldest observed year tail,Range=1989–2025; 69 rows are from years <= 2000.,69,Requires investigation,Needs investigation

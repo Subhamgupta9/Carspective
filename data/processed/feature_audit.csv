@@ -1,0 +1,14 @@
+Feature,Original/Engineered,Data Type,Unique Count,Missing Count,Transformation,Reason,Leakage Risk,Recommended for Modeling
+price,Original,int64,3372,0,None; business target retained,"Prediction target, not an input",High if used as input,No — target only
+manufacturing_year,Original,int64,35,0,None,Retain cleaned source feature,Low,Yes; later validation required
+model,Original,str,1200,0,None,Retain cleaned source feature,Category handling must be fit on training only,Yes; later validation required
+km_driven,Original,int64,9622,0,None,Retain cleaned source feature,Low,Yes; later validation required
+fuel_type,Original,str,10,0,None,Retain cleaned source feature,Category handling must be fit on training only,Yes; later validation required
+transmission_type,Original,str,8,0,None,Retain cleaned source feature,Category handling must be fit on training only,Yes; later validation required
+brand,Original,str,47,0,None,Retain cleaned source feature,Category handling must be fit on training only,Yes; later validation required
+city,Original,str,1468,0,None,Retain cleaned source feature,Category handling must be fit on training only,Yes; later validation required
+bodytype,Original,str,18,0,None,Retain cleaned source feature,Category handling must be fit on training only,Yes; later validation required
+number_of_owners,Original,int64,6,0,None,Retain cleaned source feature,Low,Yes; later validation required
+vehicle_age,Engineered,int64,35,0,REFERENCE_YEAR - manufacturing_year,Captures elapsed years under explicit fixed reference,Low; input-only,Yes
+log_km_driven,Engineered,float64,9622,0,log1p(km_driven),Compresses observed right tail while retaining raw km,Low; input-only,Yes
+fuel_transmission_type,Engineered,string,29,0,fuel_type + '__' + transmission_type,Compact categorical combination,Low; input-only,"Yes, subject to later encoding validation"

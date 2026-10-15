@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-10-05T12:00:00Z",
+  "description": "SmartCar AI Canonical Vehicle Asset Manifest - High Quality Local 3D Models",
+  "vehicles": [
+    {
+      "brand": "Porsche",
+      "model": "911",
+      "make_slug": "porsche",
+      "model_slug": "911",
+      "variant": "Carrera 4S",
+      "generation": "992-2019-2025",
+      "generation_name": "Porsche 911 Carrera 4S (Studio HD)",
+      "year_start": 2019,
+      "year_end": 2025,
+      "path": "app/static/models/generic_car.glb",
+      "source": "studio_hd",
+      "verified": true,
+      "dimensions": {
+        "length": 4.51,
+        "width": 2.02,
+        "height": 1.30
+      },
+      "metadata": {
+        "targetHeight": 1.55,
+        "baseHeading": -1.5707963267948966,
+        "groundOffset": 0.18915,
+        "cameraDistance": 7.2,
+        "cameraTargetHeight": 0.75,
+        "cameraTargetZ": 3.2
+      }
+    }
+  ]
+}

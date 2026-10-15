@@ -1,0 +1,29 @@
+{
+  "pipeline_safety": "All unseen categories and extreme numeric values execute deterministically without runtime exceptions.",
+  "findings": [
+    {
+      "scenario": "Unseen Model ('Tesla Model 3')",
+      "raw_prediction_value": 1686144.4234677583,
+      "status": "SAFE_EXECUTION (OneHotEncoder handle_unknown='ignore' prevented pipeline crash)",
+      "confidence_assessment": "REQUIRES 'LIMITED_CONFIDENCE' or 'INSUFFICIENT_DATA' flag due to out-of-distribution feature."
+    },
+    {
+      "scenario": "Unseen Remote City ('Port Blair')",
+      "raw_prediction_value": 433142.5509973263,
+      "status": "SAFE_EXECUTION (OneHotEncoder handle_unknown='ignore' prevented pipeline crash)",
+      "confidence_assessment": "REQUIRES 'LIMITED_CONFIDENCE' or 'INSUFFICIENT_DATA' flag due to out-of-distribution feature."
+    },
+    {
+      "scenario": "Extreme Mileage (800,000 km)",
+      "raw_prediction_value": 663515.009627633,
+      "status": "SAFE_EXECUTION (OneHotEncoder handle_unknown='ignore' prevented pipeline crash)",
+      "confidence_assessment": "REQUIRES 'LIMITED_CONFIDENCE' or 'INSUFFICIENT_DATA' flag due to out-of-distribution feature."
+    },
+    {
+      "scenario": "Extreme Vintage (Year 1995)",
+      "raw_prediction_value": 55873.04438152932,
+      "status": "SAFE_EXECUTION (OneHotEncoder handle_unknown='ignore' prevented pipeline crash)",
+      "confidence_assessment": "REQUIRES 'LIMITED_CONFIDENCE' or 'INSUFFICIENT_DATA' flag due to out-of-distribution feature."
+    }
+  ]
+}

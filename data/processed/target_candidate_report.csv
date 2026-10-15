@@ -1,0 +1,2 @@
+Column,Data Type,Unique Values,Missing Values,Numerical Summary,Appears price-related,Assessment
+price,int64,3372,0,"{'count': 57480.0, 'mean': 996082.5436499652, 'std': 1832278.3332336568, 'min': 15000.0, '25%': 340000.0, '50%': 550000.0, '75%': 988916.0, 'max': 200000000.0}",True,Name matches a price-related keyword; values require business review before target selection.

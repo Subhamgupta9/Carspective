@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SmartCar AI — Immersive Automotive Intelligence</title>
+
+    <!-- CRITICAL RESOURCE PRELOADS & PRECONNECTS (PHASE 11) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preload" href="{{ url_for('static', filename='css/style.css') }}" as="style">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/experience/main.js') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- =========================================================
+         THREE.JS IMPORT MAP
+         ========================================================= -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+
+<body>
+
+    <!-- =========================================================
+         MINIMAL AUTOMOTIVE NAVIGATION
+         ========================================================= -->
+    <nav class="navbar" id="mainNavbar" aria-label="Main Navigation">
+
+        <div class="nav-left">
+            <div class="brand-logo">
+                <span class="brand-emblem">◆</span>
+                <div>
+                    <div class="logo">
+                        SmartCar <span>AI</span>
+                    </div>
+                    <div class="logo-tagline">
+                        Automotive Intelligence
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-center">
+            <button type="button" class="nav-link active" id="navHomeBtn">
+                Home
+            </button>
+            <button type="button" class="nav-link" id="navExploreBtn">
+                Explore
+            </button>
+            <button type="button" class="nav-link" id="navValuationBtn">
+                Valuation
+            </button>
+        </div>
+
+        <div class="nav-right">
+            <button
+                type="button"
+                id="hudAudioToggle"
+                class="hud-audio-btn"
+                aria-label="Toggle sound feedback"
+            >
+                <span>🔊</span>
+                <span>SOUND ON</span>
+            </button>
+
+            <button
+                type="button"
+                id="hudInstantValuateBtn"
+                class="hud-instant-btn"
+                aria-label="Instant ML valuation"
+            >
+                <span>⚡</span>
+                <span>VALUATE CAR</span>
+            </button>
+
+            <div class="nav-status">
+                <span class="status-dot"></span>
+                <span id="experienceStatus">SYSTEM READY</span>
+            </div>
+
+            <button
+                type="button"
+                id="themeToggle"
+                class="theme-toggle"
+                aria-label="Toggle dark mode"
+            >
+                <span id="themeIcon">🌙</span>
+            </button>
+        </div>
+
+    </nav>
+
+
+    <!-- =========================================================
+         IMMERSIVE 3D SMARTCAR EXPERIENCE
+         ========================================================= -->
+    <section
+        id="smartCarExperience"
+        aria-label="SmartCar AI immersive vehicle experience"
+    >
+        <canvas id="experienceCanvas"></canvas>
+
+        <!-- HOLOGRAPHIC SCANNER OVERLAY -->
+        <div id="hologramScannerOverlay" class="hologram-scanner" aria-hidden="true">
+            <div class="scanner-laser-line"></div>
+            <div class="scanner-grid"></div>
+            <div class="scanner-hud-text">
+                <span class="scanner-bracket">[</span>
+                <span id="scannerStatusMsg">SCANNING VEHICLE SPECIFICATIONS...</span>
+                <span class="scanner-bracket">]</span>
+            </div>
+        </div>
+
+        <!-- MINIMAL CINEMATIC LOADER -->
+        <div id="experienceLoader" class="experience-loader" aria-live="polite">
+            <div class="loader-content">
+                <div class="loader-emblem">◆</div>
+                <div class="loader-brand">SMARTCAR AI</div>
+                <div class="loader-status" id="loaderStatus">INITIALIZING EXPERIENCE</div>
+                <div class="loader-pulse-track">
+                    <div class="loader-pulse-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOP-LEFT: REAL-TIME VEHICLE TELEMETRY CARD -->
+        <aside id="vehicleTelemetryHud" class="hud-card telemetry-hud" aria-label="Vehicle Telemetry">
+            <div class="hud-card-header">
+                <div class="hud-pill-tag">
+                    <span class="pulse-ring"></span>
+                    <span>LEVEL 2 VERIFIED</span>
+                </div>
+                <span class="hud-latency">60 FPS</span>
+            </div>
+
+            <!-- SKELETON LOADING STATE (PHASE 11) -->
+            <div id="telemetrySkeleton" class="telemetry-skeleton hidden" aria-hidden="true">
+                <div class="skeleton-shimmer skeleton-title-bar"></div>
+                <div class="skeleton-shimmer skeleton-sub-bar"></div>
+                <div class="skeleton-metrics-row-skel">
+                    <div class="skeleton-shimmer skeleton-metric-pill"></div>
+                    <div class="skeleton-shimmer skeleton-metric-pill"></div>
+                </div>
+                <div class="skeleton-shimmer skeleton-price-pill"></div>
+            </div>
+
+            <div id="telemetryContent" class="telemetry-content">
+                <div class="hud-vehicle-identity">
+                    <h2 id="hudVehicleTitle" class="hud-vehicle-title">Porsche 911</h2>
+                    <div id="hudVehicleSubtitle" class="hud-vehicle-subtitle">2021 • Coupe • Petrol</div>
+                    <div id="hudEngineTag" class="hud-engine-tag">Twin-Turbo 3.0L Flat-6</div>
+                </div>
+
+                <div class="hud-metrics-row">
+                    <div class="hud-metric-pill">
+                        <span class="metric-lbl">POWER INDEX</span>
+                        <div class="metric-bar-track">
+                            <div id="hudPowerFill" class="metric-bar-fill" style="width: 98%;"></div>
+                        </div>
+                        <span id="hudPowerVal" class="metric-num">98/100</span>
+                    </div>
+
+                    <div class="hud-metric-pill">
+                        <span class="metric-lbl">RETAINED VALUE</span>
+                        <div class="metric-bar-track">
+                            <div id="hudHealthFill" class="metric-bar-fill health" style="width: 94%;"></div>
+                        </div>
+                        <span id="hudHealthVal" class="metric-num">94%</span>
+                    </div>
+                </div>
+
+                <div class="hud-card-footer">
+                    <div class="hud-price-preview">
+                        <span class="price-lbl">ESTIMATED BALLPARK</span>
+                        <span id="hudEstBallpark" class="price-est">Est. ₹165.0 Lakh</span>
+                    </div>
+                    <button type="button" id="hudTelemetryValuateBtn" class="hud-action-cta" title="Calculate Precise ML Valuation">
+                        <span>ANALYZE</span>
+                        <span class="arrow-flare">→</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- RIGHT DOCK: 3D CAMERA & STUDIO DIRECTOR -->
+        <aside id="cameraDirectorHud" class="director-dock" aria-label="3D Camera Controls">
+            <div class="director-dock-inner">
+                <div class="dock-title">VIEWPORT</div>
+
+                <button type="button" class="hud-btn" id="hudSpinBtn" title="Auto 360° Turntable" aria-label="Turntable auto-rotation">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-tooltip">360° SPIN</span>
+                </button>
+
+                <button type="button" class="hud-btn active" id="hudHeroBtn" title="Hero Three-Quarter" aria-label="Hero angle">
+                    <span class="btn-icon">🏎️</span>
+                    <span class="btn-tooltip">HERO 3/4</span>
+                </button>
+
+                <button type="button" class="hud-btn" id="hudSideBtn" title="Side Aerodynamic Profile" aria-label="Side profile">
+                    <span class="btn-icon">🚘</span>
+                    <span class="btn-tooltip">SIDE VIEW</span>
+                </button>
+
+                <button type="button" class="hud-btn" id="hudFrontBtn" title="Front Grille & Lighting" aria-label="Front stance">
+                    <span class="btn-icon">🔍</span>
+                    <span class="btn-tooltip">FRONT VIEW</span>
+                </button>
+
+                <button type="button" class="hud-btn" id="hudRearBtn" title="Rear Diffuser Stance" aria-label="Rear view">
+                    <span class="btn-icon">🏁</span>
+                    <span class="btn-tooltip">REAR VIEW</span>
+                </button>
+
+                <button type="button" class="hud-btn" id="hudTopBtn" title="Orbital Drone Perspective" aria-label="Top view">
+                    <span class="btn-icon">🛸</span>
+                    <span class="btn-tooltip">TOP AERO</span>
+                </button>
+
+                <div class="dock-separator"></div>
+
+                <button type="button" class="hud-btn active" id="hudLightBtn" title="Toggle Headlights" aria-label="Toggle headlights">
+                    <span class="btn-icon">💡</span>
+                    <span class="btn-tooltip">HEADLIGHTS</span>
+                </button>
+
+                <button type="button" class="hud-btn" id="hudMoodBtn" title="Cycle Studio Lighting" aria-label="Cycle lighting moods">
+                    <span class="btn-icon">🌈</span>
+                    <span class="btn-tooltip">LIGHT MOOD</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- BOTTOM-LEFT: LIVE PAINT FINISH SWATCHES -->
+        <aside id="paintFinishHud" class="paint-studio-hud" aria-label="Car Paint Finishes">
+            <div class="paint-studio-inner">
+                <span class="paint-studio-label">FINISH</span>
+                <div class="paint-swatch-list">
+                    <button type="button" class="color-swatch active" data-id="bronze" data-color="#3c3a29" style="--swatch-color: #3c3a29;" title="Slate Bronze" aria-label="Slate Bronze"></button>
+                    <button type="button" class="color-swatch" data-id="black" data-color="#121315" style="--swatch-color: #121315;" title="Obsidian Black" aria-label="Obsidian Black"></button>
+                    <button type="button" class="color-swatch" data-id="white" data-color="#eef0f3" style="--swatch-color: #eef0f3;" title="Glacier White" aria-label="Glacier White"></button>
+                    <button type="button" class="color-swatch" data-id="silver" data-color="#858990" style="--swatch-color: #858990;" title="Sterling Silver" aria-label="Sterling Silver"></button>
+                    <button type="button" class="color-swatch" data-id="red" data-color="#821319" style="--swatch-color: #821319;" title="Crimson Red" aria-label="Crimson Red"></button>
+                    <button type="button" class="color-swatch" data-id="blue" data-color="#13233e" style="--swatch-color: #13233e;" title="Deep Sapphire" aria-label="Deep Sapphire"></button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- BOTTOM-CENTER: VEHICLE SHOWCASE DOCK -->
+        <nav id="vehicleSwitcherDock" class="vehicle-dock" aria-label="Quick Vehicle Showcase">
+            <div class="vehicle-dock-cards">
+                <button type="button" class="dock-card active" data-preset-id="porsche-911">
+                    <span class="card-badge highlight">⭐ STUDIO HD</span>
+                    <div class="card-title">Porsche 911 Carrera 4S</div>
+                    <div class="card-meta">Ultra HD Studio • 2021</div>
+                </button>
+
+                <button type="button" class="dock-card" data-preset-id="bmw-3series">
+                    <span class="card-badge">EXECUTIVE</span>
+                    <div class="card-title">BMW 3 Series</div>
+                    <div class="card-meta">2021 • 2.0L Turbo</div>
+                </button>
+
+                <button type="button" class="dock-card" data-preset-id="merc-cclass">
+                    <span class="card-badge">LUXURY SEDAN</span>
+                    <div class="card-title">Mercedes C-Class</div>
+                    <div class="card-meta">2022 • Diesel EQ</div>
+                </button>
+
+                <button type="button" class="dock-card" data-preset-id="toyota-fortuner">
+                    <span class="card-badge">4x4 ALL-TERRAIN</span>
+                    <div class="card-title">Toyota Fortuner</div>
+                    <div class="card-meta">2021 • 2.8L D-4D</div>
+                </button>
+
+                <button type="button" class="dock-card" data-preset-id="hyundai-creta">
+                    <span class="card-badge">URBAN SUV</span>
+                    <div class="card-title">Hyundai Creta</div>
+                    <div class="card-meta">2022 • Smartstream</div>
+                </button>
+
+                <button type="button" class="dock-card custom-btn" data-preset-id="custom" title="Open Custom 9-Step Configurator">
+                    <span class="card-badge accent">CUSTOM SPEC</span>
+                    <div class="card-title">+ BUILD YOURS</div>
+                    <div class="card-meta">57,480 Car Dataset</div>
+                </button>
+            </div>
+        </nav>
+
+        <!-- EXPERIENCE HUD OVERLAY -->
+        <div id="experienceOverlay" aria-hidden="true">
+
+            <div class="experience-intro">
+                <div class="intro-eyebrow">
+                    USED CAR INTELLIGENCE
+                </div>
+                <h1>
+                    Know the
+                    <span>Real Value.</span>
+                </h1>
+                <p>
+                    Explore your vehicle in an immersive
+                    automotive environment.
+                </p>
+            </div>
+
+            <div class="experience-hint">
+                <span class="hint-line"></span>
+                <span>SELECT A VEHICLE TO BEGIN</span>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =========================================================
+         PHASE 10: AI EXPLANATION ASSISTANT (FLOATING & DRAWER)
+         ========================================================= -->
+    <aside id="aiAssistantContainer" class="ai-assistant-container" aria-label="AI Explanation Assistant">
+        <!-- FLOATING TRIGGER BUTTON -->
+        <button type="button" id="aiAssistantTrigger" class="ai-floating-btn" title="Open AI Valuation Assistant" aria-label="Open AI Valuation Assistant">
+            <span class="ai-btn-pulse"></span>
+            <span class="ai-btn-icon">✦</span>
+            <span class="ai-btn-label">AI EXPLAIN</span>
+        </button>
+
+        <!-- ASSISTANT SLIDE-OVER DRAWER -->
+        <div id="aiAssistantDrawer" class="ai-drawer hidden" role="dialog" aria-modal="true" aria-label="Valuation Explanation Assistant">
+            <div class="ai-drawer-header">
+                <div class="ai-header-brand">
+                    <span class="ai-sparkle-badge">✦ ML EXPLAINER</span>
+                    <h3 class="ai-drawer-title">SMARTCAR AI ASSISTANT</h3>
+                    <span class="ai-drawer-sub">Grounded in ML Model &amp; 57,480-Record Dataset</span>
+                </div>
+                <div class="ai-header-actions">
+                    <button type="button" id="aiAssistantCloseBtn" class="ai-close-btn" title="Close AI Assistant" aria-label="Close AI Assistant">✕</button>
+                </div>
+            </div>
+
+            <!-- ACTIVE VEHICLE CONTEXT CHIP -->
+            <div class="ai-context-banner" id="aiContextBanner">
+                <span class="ai-ctx-dot"></span>
+                <span class="ai-ctx-text" id="aiContextText">No active valuation loaded. Configure a vehicle to begin.</span>
+            </div>
+
+            <!-- CHAT MESSAGES SCROLL AREA -->
+            <div class="ai-messages-wrap" id="aiMessagesWrap">
+                <div class="ai-chat-messages" id="aiChatMessages">
+                    <!-- Initial Welcome Message -->
+                    <div class="ai-msg assistant welcome">
+                        <div class="ai-msg-avatar">✦</div>
+                        <div class="ai-msg-content">
+                            <p class="ai-msg-p">Hello! I'm your SmartCar AI Explanation Assistant. I explain the mathematical drivers, market percentiles, and empirical comparables behind your vehicle's valuation.</p>
+                            <p class="ai-msg-p">Select a question below or ask anything about this car's depreciation, price justification, or market liquidity.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="ai-typing-indicator hidden" id="aiTypingIndicator">
+                    <span class="ai-typing-dot"></span>
+                    <span class="ai-typing-dot"></span>
+                    <span class="ai-typing-dot"></span>
+                    <span class="ai-typing-text">AI is synthesizing grounded valuation...</span>
+                </div>
+            </div>
+
+            <!-- SUGGESTED QUESTIONS CHIPS -->
+            <div class="ai-suggested-section" id="aiSuggestedSection">
+                <div class="ai-suggested-label">SUGGESTED QUESTIONS</div>
+                <div class="ai-suggested-chips" id="aiSuggestedChips">
+                    <button type="button" class="ai-chip" data-q="Why is this price?">Why is this price?</button>
+                    <button type="button" class="ai-chip" data-q="What reduced my car's value?">What reduced my car's value?</button>
+                    <button type="button" class="ai-chip" data-q="Is this a good selling price?">Is this a good selling price?</button>
+                    <button type="button" class="ai-chip" data-q="Explain depreciation.">Explain depreciation.</button>
+                    <button type="button" class="ai-chip" data-q="What affects my valuation?">What affects my valuation?</button>
+                </div>
+            </div>
+
+            <!-- CHAT INPUT & SEND FORM -->
+            <form id="aiChatForm" class="ai-chat-form" onsubmit="return false;">
+                <div class="ai-input-wrap">
+                    <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Ask about this valuation or market data..." autocomplete="off">
+                    <button type="submit" id="aiChatSendBtn" class="ai-send-btn" title="Send Question" aria-label="Send Question">
+                        <span>↑</span>
+                    </button>
+                </div>
+                <div class="ai-disclaimer">
+                    <span>Anti-hallucination enforced • Grounded strictly in secondary market transactions</span>
+                </div>
+            </form>
+        </div>
+    </aside>
+
+    <!-- =========================================================
+         DATA FROM FLASK
+         ========================================================= -->
+    <script type="application/json" id="brand-models">
+        {{ brand_models|tojson|safe }}
+    </script>
+
+    <script type="application/json" id="model-details">
+        {{ model_details|tojson|safe }}
+    </script>
+
+    <script type="application/json" id="dataset-cities">
+        {{ cities|tojson|safe }}
+    </script>
+
+    <script type="application/json" id="dataset-owners">
+        {{ owners|tojson|safe }}
+    </script>
+
+    <script type="application/json" id="form-data">
+        {{ form_data|default({})|tojson|safe }}
+    </script>
+
+    <script>
+        const brandModels = JSON.parse(
+            document.getElementById("brand-models").textContent
+        );
+
+        const modelDetails = JSON.parse(
+            document.getElementById("model-details").textContent
+        );
+
+        const formData = JSON.parse(
+            document.getElementById("form-data").textContent
+        );
+
+        const datasetCities = JSON.parse(
+            document.getElementById("dataset-cities").textContent
+        );
+
+        const datasetOwners = JSON.parse(
+            document.getElementById("dataset-owners").textContent
+        );
+
+        window.brandModels = brandModels;
+        window.modelDetails = modelDetails;
+        window.datasetCities = datasetCities;
+        window.datasetOwners = datasetOwners;
+        window.formData = formData;
+        window.smartCarExperience = {
+            isReady: () => false,
+            getVehicle: () => null,
+            getState: () => "LOADING",
+            getAppState: () => "LOADING",
+            getStory: () => null,
+            getChapter: () => 1,
+            setChapter: () => {}
+        };
+
+        console.log("SMARTCAR AI — BRAND MODELS:", brandModels);
+        console.log("SMARTCAR AI — MODEL DETAILS:", modelDetails);
+        console.log("SMARTCAR AI — FORM DATA:", formData);
+    </script>
+
+
+    <!-- =========================================================
+         APPLICATION CONTROLLER
+         ========================================================= -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+
+    <!-- =========================================================
+         IMMERSIVE 3D EXPERIENCE MODULE
+         ========================================================= -->
+    <script
+        type="module"
+        src="{{ url_for('static', filename='js/experience/main.js') }}"
+    ></script>
+
+</body>
+
+</html>

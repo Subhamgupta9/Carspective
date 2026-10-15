@@ -1,0 +1,12 @@
+Metric,Value
+Number of Rows,57480
+Number of Columns,11
+Duplicate Rows,0
+Columns With Missing Values,1
+Total Missing Cells,28
+Numerical Columns,4
+Categorical Columns,7
+Target Column,price
+Target Missing Values,0
+Target Zero Values,0
+Target Negative Values,0

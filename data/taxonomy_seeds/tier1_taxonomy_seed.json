@@ -1,0 +1,1098 @@
+{
+  "metadata": {
+    "version": "1.2.0",
+    "description": "Empirical Tier 1 High-Volume Indian Vehicle Taxonomy & Evidence Seed",
+    "generated_from": "57,480 historical Indian used-car listing records"
+  },
+  "evidence_sources": [
+    {
+      "id": "src-gncap-2018-nexon",
+      "organization_name": "Global NCAP",
+      "organization_type": "SAFETY_AGENCY",
+      "source_url": "https://www.globalncap.org/news/tata-nexon-first-five-star-car-for-india",
+      "reference_document": "Global NCAP Safer Cars For India 2018 - Tata Nexon",
+      "published_at": "2018-12-07",
+      "valid_from": "2018-12-07",
+      "valid_until": "2023-09-01",
+      "verification_status": "VERIFIED",
+      "confidence_score": 1.0,
+      "payload_hash": "cb509952800699439bdb0d0675f74f4ffd166dbeaecc62fde16f903e658d88ba"
+    },
+    {
+      "id": "src-gncap-2022-creta",
+      "organization_name": "Global NCAP",
+      "organization_type": "SAFETY_AGENCY",
+      "source_url": "https://www.globalncap.org/news/hyundai-creta-three-stars",
+      "reference_document": "Global NCAP Safer Cars For India 2022 - Hyundai Creta",
+      "published_at": "2022-04-12",
+      "valid_from": "2020-03-01",
+      "valid_until": "2024-01-15",
+      "verification_status": "VERIFIED",
+      "confidence_score": 1.0,
+      "payload_hash": "deb1d0172944c2e23ec2db7c8761d6df4494655b5a5d14559bf119bbab3d3298"
+    },
+    {
+      "id": "src-gncap-2018-swift",
+      "organization_name": "Global NCAP",
+      "organization_type": "SAFETY_AGENCY",
+      "source_url": "https://www.globalncap.org/news/maruti-suzuki-swift-two-stars",
+      "reference_document": "Global NCAP Safer Cars For India 2018 - Maruti Suzuki Swift",
+      "published_at": "2018-10-10",
+      "valid_from": "2018-02-01",
+      "valid_until": "2024-05-01",
+      "verification_status": "VERIFIED",
+      "confidence_score": 1.0,
+      "payload_hash": "0908edf52b7e3c0a5e2db27ffc1d5af5d79540b1786f157cc738395d2f855205"
+    },
+    {
+      "id": "src-gncap-2020-thar",
+      "organization_name": "Global NCAP",
+      "organization_type": "SAFETY_AGENCY",
+      "source_url": "https://www.globalncap.org/news/mahindra-thar-four-stars",
+      "reference_document": "Global NCAP Safer Cars For India 2020 - Mahindra Thar",
+      "published_at": "2020-11-25",
+      "valid_from": "2020-10-01",
+      "valid_until": "2025-12-31",
+      "verification_status": "VERIFIED",
+      "confidence_score": 1.0,
+      "payload_hash": "059db241b10f1ee0aa3f40dd23510221fc73b7e27983ed887e6babf127c62774"
+    },
+    {
+      "id": "src-empirical-listings-57480",
+      "organization_name": "CARspective Research Engine",
+      "organization_type": "EMPIRICAL_DATASET",
+      "source_url": "data/raw/indian_used_cars_raw_57480.csv",
+      "reference_document": "57,480 Historical Indian Used-Car Listing Records",
+      "published_at": "2026-09-01",
+      "valid_from": "2015-01-01",
+      "valid_until": "2026-12-31",
+      "verification_status": "EMPIRICAL",
+      "confidence_score": 0.95,
+      "payload_hash": "3dcaeed7f70913d9ef0229f29a0053dbd80e460f6f456c2b8d2c491648e0dfb6"
+    }
+  ],
+  "manufacturers": [
+    {
+      "name": "Maruti Suzuki",
+      "slug": "maruti-suzuki",
+      "country_of_origin": "India / Japan",
+      "aliases": [
+        "Maruti",
+        "Maruti-Suzuki",
+        "MSIL",
+        "Suzuki"
+      ],
+      "models": [
+        {
+          "name": "Swift",
+          "slug": "swift",
+          "body_type": "Hatchback",
+          "segment": "B",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Maruti Swift",
+            "Swift Hatchback"
+          ],
+          "generations": [
+            {
+              "name": "2nd Generation",
+              "slug": "gen-2-2011",
+              "year_start": 2011,
+              "year_end": 2018,
+              "is_facelift": false,
+              "years": [
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016,
+                2017,
+                2018
+              ],
+              "variants": [
+                {
+                  "name": "VXi",
+                  "slug": "vxi",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 84.0,
+                      "slug": "1-2-petrol-5mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "VDi",
+                  "slug": "vdi",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1248,
+                      "power_bhp": 74.0,
+                      "slug": "1-3-ddis-5mt"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "3rd Generation",
+              "slug": "gen-3-2018",
+              "year_start": 2018,
+              "year_end": 2024,
+              "is_facelift": false,
+              "years": [
+                2018,
+                2019,
+                2020,
+                2021,
+                2022,
+                2023,
+                2024
+              ],
+              "variants": [
+                {
+                  "name": "VXi",
+                  "slug": "vxi",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 88.5,
+                      "slug": "1-2-dualjet-5mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (AMT)",
+                      "displacement_cc": 1197,
+                      "power_bhp": 88.5,
+                      "slug": "1-2-dualjet-5amt"
+                    }
+                  ]
+                },
+                {
+                  "name": "ZXi",
+                  "slug": "zxi",
+                  "trim_level": "High",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 88.5,
+                      "slug": "1-2-dualjet-5mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (AMT)",
+                      "displacement_cc": 1197,
+                      "power_bhp": 88.5,
+                      "slug": "1-2-dualjet-5amt"
+                    }
+                  ]
+                },
+                {
+                  "name": "ZXi Plus",
+                  "slug": "zxi-plus",
+                  "trim_level": "Top",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 88.5,
+                      "slug": "1-2-dualjet-5mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (AMT)",
+                      "displacement_cc": 1197,
+                      "power_bhp": 88.5,
+                      "slug": "1-2-dualjet-5amt"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Baleno",
+          "slug": "baleno",
+          "body_type": "Hatchback",
+          "segment": "Premium Hatchback",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Maruti Baleno",
+            "Baleno Nexa"
+          ],
+          "generations": [
+            {
+              "name": "1st Gen Nexa Baleno",
+              "slug": "gen-1-2015",
+              "year_start": 2015,
+              "year_end": 2022,
+              "is_facelift": false,
+              "years": [
+                2015,
+                2016,
+                2017,
+                2018,
+                2019,
+                2020,
+                2021,
+                2022
+              ],
+              "variants": [
+                {
+                  "name": "Delta",
+                  "slug": "delta",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 83.0,
+                      "slug": "1-2-k12-5mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (CVT)",
+                      "displacement_cc": 1197,
+                      "power_bhp": 83.0,
+                      "slug": "1-2-k12-cvt"
+                    }
+                  ]
+                },
+                {
+                  "name": "Zeta",
+                  "slug": "zeta",
+                  "trim_level": "High",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 83.0,
+                      "slug": "1-2-k12-5mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (CVT)",
+                      "displacement_cc": 1197,
+                      "power_bhp": 83.0,
+                      "slug": "1-2-k12-cvt"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Wagon R",
+          "slug": "wagon-r",
+          "body_type": "Hatchback",
+          "segment": "Tallboy Hatchback",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Maruti Wagon R",
+            "WagonR"
+          ],
+          "generations": [
+            {
+              "name": "3rd Generation",
+              "slug": "gen-3-2019",
+              "year_start": 2019,
+              "year_end": null,
+              "is_facelift": false,
+              "years": [
+                2019,
+                2020,
+                2021,
+                2022,
+                2023,
+                2024,
+                2025
+              ],
+              "variants": [
+                {
+                  "name": "LXi",
+                  "slug": "lxi",
+                  "trim_level": "Base",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 998,
+                      "power_bhp": 67.0,
+                      "slug": "1-0-k10-5mt"
+                    },
+                    {
+                      "fuel_type": "CNG",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 998,
+                      "power_bhp": 58.0,
+                      "slug": "1-0-cng-5mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "VXi",
+                  "slug": "vxi",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 81.0,
+                      "slug": "1-2-k12-5mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (AMT)",
+                      "displacement_cc": 1197,
+                      "power_bhp": 81.0,
+                      "slug": "1-2-k12-5amt"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Hyundai",
+      "slug": "hyundai",
+      "country_of_origin": "South Korea",
+      "aliases": [
+        "Hyundai Motors",
+        "HMIL"
+      ],
+      "models": [
+        {
+          "name": "Creta",
+          "slug": "creta",
+          "body_type": "SUV",
+          "segment": "Mid-Size SUV",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Hyundai Creta"
+          ],
+          "generations": [
+            {
+              "name": "1st Generation",
+              "slug": "gen-1-2015",
+              "year_start": 2015,
+              "year_end": 2020,
+              "is_facelift": false,
+              "years": [
+                2015,
+                2016,
+                2017,
+                2018,
+                2019,
+                2020
+              ],
+              "variants": [
+                {
+                  "name": "SX",
+                  "slug": "sx",
+                  "trim_level": "High",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1591,
+                      "power_bhp": 121.0,
+                      "slug": "1-6-vtvt-6mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1582,
+                      "power_bhp": 126.0,
+                      "slug": "1-6-crdi-6mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Automatic",
+                      "displacement_cc": 1582,
+                      "power_bhp": 126.0,
+                      "slug": "1-6-crdi-6at"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "2nd Generation Pre-Facelift",
+              "slug": "gen-2-2020",
+              "year_start": 2020,
+              "year_end": 2024,
+              "is_facelift": false,
+              "years": [
+                2020,
+                2021,
+                2022,
+                2023,
+                2024
+              ],
+              "variants": [
+                {
+                  "name": "SX",
+                  "slug": "sx",
+                  "trim_level": "High",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1497,
+                      "power_bhp": 113.4,
+                      "slug": "1-5-mp-6mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1493,
+                      "power_bhp": 113.4,
+                      "slug": "1-5-crdi-6mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "SX (O)",
+                  "slug": "sx-opt",
+                  "trim_level": "Top",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (CVT)",
+                      "displacement_cc": 1497,
+                      "power_bhp": 113.4,
+                      "slug": "1-5-mp-ivt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Automatic",
+                      "displacement_cc": 1493,
+                      "power_bhp": 113.4,
+                      "slug": "1-5-crdi-6at"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (DCT)",
+                      "displacement_cc": 1353,
+                      "power_bhp": 138.0,
+                      "slug": "1-4-turbo-7dct"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "i20",
+          "slug": "i20",
+          "body_type": "Hatchback",
+          "segment": "Premium Hatchback",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Hyundai i20",
+            "Elite i20"
+          ],
+          "generations": [
+            {
+              "name": "Elite i20 (2nd Gen)",
+              "slug": "gen-2-2014",
+              "year_start": 2014,
+              "year_end": 2020,
+              "is_facelift": false,
+              "years": [
+                2014,
+                2015,
+                2016,
+                2017,
+                2018,
+                2019,
+                2020
+              ],
+              "variants": [
+                {
+                  "name": "Sportz",
+                  "slug": "sportz",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 82.0,
+                      "slug": "1-2-kappa-5mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1396,
+                      "power_bhp": 89.0,
+                      "slug": "1-4-crdi-6mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "Asta",
+                  "slug": "asta",
+                  "trim_level": "Top",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1197,
+                      "power_bhp": 82.0,
+                      "slug": "1-2-kappa-5mt"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tata",
+      "slug": "tata",
+      "country_of_origin": "India",
+      "aliases": [
+        "Tata Motors"
+      ],
+      "models": [
+        {
+          "name": "Nexon",
+          "slug": "nexon",
+          "body_type": "SUV",
+          "segment": "Compact SUV",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Tata Nexon"
+          ],
+          "generations": [
+            {
+              "name": "1st Generation",
+              "slug": "gen-1-2017",
+              "year_start": 2017,
+              "year_end": 2023,
+              "is_facelift": false,
+              "years": [
+                2017,
+                2018,
+                2019,
+                2020,
+                2021,
+                2022,
+                2023
+              ],
+              "variants": [
+                {
+                  "name": "XM",
+                  "slug": "xm",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1199,
+                      "power_bhp": 118.0,
+                      "slug": "1-2-revotron-6mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1497,
+                      "power_bhp": 108.0,
+                      "slug": "1-5-revotorq-6mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "XZ Plus",
+                  "slug": "xz-plus",
+                  "trim_level": "Top",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1199,
+                      "power_bhp": 118.0,
+                      "slug": "1-2-revotron-6mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (AMT)",
+                      "displacement_cc": 1199,
+                      "power_bhp": 118.0,
+                      "slug": "1-2-revotron-6amt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1497,
+                      "power_bhp": 108.0,
+                      "slug": "1-5-revotorq-6mt"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mahindra",
+      "slug": "mahindra",
+      "country_of_origin": "India",
+      "aliases": [
+        "M&M",
+        "Mahindra & Mahindra"
+      ],
+      "models": [
+        {
+          "name": "Thar",
+          "slug": "thar",
+          "body_type": "SUV",
+          "segment": "Lifestyle 4x4",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Mahindra Thar",
+            "Thar 4x4"
+          ],
+          "generations": [
+            {
+              "name": "2nd Generation",
+              "slug": "gen-2-2020",
+              "year_start": 2020,
+              "year_end": null,
+              "is_facelift": false,
+              "years": [
+                2020,
+                2021,
+                2022,
+                2023,
+                2024,
+                2025
+              ],
+              "variants": [
+                {
+                  "name": "AX (O)",
+                  "slug": "ax-opt",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 2184,
+                      "power_bhp": 130.0,
+                      "slug": "2-2-mhawk-6mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "LX",
+                  "slug": "lx",
+                  "trim_level": "Top",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1997,
+                      "power_bhp": 150.0,
+                      "slug": "2-0-mstallion-6mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic",
+                      "displacement_cc": 1997,
+                      "power_bhp": 150.0,
+                      "slug": "2-0-mstallion-6at"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 2184,
+                      "power_bhp": 130.0,
+                      "slug": "2-2-mhawk-6mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Automatic",
+                      "displacement_cc": 2184,
+                      "power_bhp": 130.0,
+                      "slug": "2-2-mhawk-6at"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Honda",
+      "slug": "honda",
+      "country_of_origin": "Japan",
+      "aliases": [
+        "Honda Cars India",
+        "HCIL"
+      ],
+      "models": [
+        {
+          "name": "City",
+          "slug": "city",
+          "body_type": "Sedan",
+          "segment": "Mid-Size Sedan",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Honda City"
+          ],
+          "generations": [
+            {
+              "name": "4th Generation",
+              "slug": "gen-4-2014",
+              "year_start": 2014,
+              "year_end": 2020,
+              "is_facelift": false,
+              "years": [
+                2014,
+                2015,
+                2016,
+                2017,
+                2018,
+                2019,
+                2020
+              ],
+              "variants": [
+                {
+                  "name": "V",
+                  "slug": "v",
+                  "trim_level": "Mid",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1497,
+                      "power_bhp": 117.3,
+                      "slug": "1-5-ivtec-5mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "VX",
+                  "slug": "vx",
+                  "trim_level": "High",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1497,
+                      "power_bhp": 117.3,
+                      "slug": "1-5-ivtec-5mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (CVT)",
+                      "displacement_cc": 1497,
+                      "power_bhp": 117.3,
+                      "slug": "1-5-ivtec-cvt"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "5th Generation",
+              "slug": "gen-5-2020",
+              "year_start": 2020,
+              "year_end": null,
+              "is_facelift": false,
+              "years": [
+                2020,
+                2021,
+                2022,
+                2023,
+                2024,
+                2025
+              ],
+              "variants": [
+                {
+                  "name": "ZX",
+                  "slug": "zx",
+                  "trim_level": "Top",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1498,
+                      "power_bhp": 119.3,
+                      "slug": "1-5-ivtec-6mt"
+                    },
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (CVT)",
+                      "displacement_cc": 1498,
+                      "power_bhp": 119.3,
+                      "slug": "1-5-ivtec-cvt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1498,
+                      "power_bhp": 98.6,
+                      "slug": "1-5-idtec-6mt"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Toyota",
+      "slug": "toyota",
+      "country_of_origin": "Japan",
+      "aliases": [
+        "Toyota Kirloskar",
+        "TKML"
+      ],
+      "models": [
+        {
+          "name": "Innova Crysta",
+          "slug": "innova-crysta",
+          "body_type": "MUV",
+          "segment": "Premium MPV",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Toyota Innova Crysta",
+            "Crysta"
+          ],
+          "generations": [
+            {
+              "name": "1st Gen Crysta",
+              "slug": "gen-1-2016",
+              "year_start": 2016,
+              "year_end": null,
+              "is_facelift": false,
+              "years": [
+                2016,
+                2017,
+                2018,
+                2019,
+                2020,
+                2021,
+                2022,
+                2023,
+                2024
+              ],
+              "variants": [
+                {
+                  "name": "GX",
+                  "slug": "gx",
+                  "trim_level": "Entry",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 2393,
+                      "power_bhp": 148.0,
+                      "slug": "2-4-d4d-5mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Automatic",
+                      "displacement_cc": 2755,
+                      "power_bhp": 172.0,
+                      "slug": "2-8-d4d-6at"
+                    }
+                  ]
+                },
+                {
+                  "name": "ZX",
+                  "slug": "zx",
+                  "trim_level": "Top",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Automatic",
+                      "displacement_cc": 2755,
+                      "power_bhp": 172.0,
+                      "slug": "2-8-d4d-6at"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Kia",
+      "slug": "kia",
+      "country_of_origin": "South Korea",
+      "aliases": [
+        "Kia Motors",
+        "Kia India"
+      ],
+      "models": [
+        {
+          "name": "Seltos",
+          "slug": "seltos",
+          "body_type": "SUV",
+          "segment": "Mid-Size SUV",
+          "coverage_tier": "TIER_1_DEEP",
+          "aliases": [
+            "Kia Seltos"
+          ],
+          "generations": [
+            {
+              "name": "1st Generation",
+              "slug": "gen-1-2019",
+              "year_start": 2019,
+              "year_end": 2023,
+              "is_facelift": false,
+              "years": [
+                2019,
+                2020,
+                2021,
+                2022,
+                2023
+              ],
+              "variants": [
+                {
+                  "name": "HTX",
+                  "slug": "htx",
+                  "trim_level": "High Tech Line",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1497,
+                      "power_bhp": 113.4,
+                      "slug": "1-5-smartstream-6mt"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Manual",
+                      "displacement_cc": 1493,
+                      "power_bhp": 113.4,
+                      "slug": "1-5-crdi-6mt"
+                    }
+                  ]
+                },
+                {
+                  "name": "GTX Plus",
+                  "slug": "gtx-plus",
+                  "trim_level": "Top GT Line",
+                  "powertrains": [
+                    {
+                      "fuel_type": "Petrol",
+                      "transmission_type": "Automatic (DCT)",
+                      "displacement_cc": 1353,
+                      "power_bhp": 138.0,
+                      "slug": "1-4-t-gdi-7dct"
+                    },
+                    {
+                      "fuel_type": "Diesel",
+                      "transmission_type": "Automatic",
+                      "displacement_cc": 1493,
+                      "power_bhp": 113.4,
+                      "slug": "1-5-crdi-6at"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "knowledge_claims": [
+    {
+      "canonical_vehicle_id": "tata::nexon::gen-1-2017",
+      "hierarchy_level": "GENERATION",
+      "attribute_category": "SAFETY",
+      "attribute_key": "adult_occupant_crash_rating",
+      "claim_value": "5 Stars (Global NCAP)",
+      "evidence_state": "VERIFIED",
+      "source_id": "src-gncap-2018-nexon",
+      "verification_notes": "First Indian-manufactured vehicle to achieve 5-star adult occupant rating."
+    },
+    {
+      "canonical_vehicle_id": "hyundai::creta::gen-2-2020",
+      "hierarchy_level": "GENERATION",
+      "attribute_category": "SAFETY",
+      "attribute_key": "adult_occupant_crash_rating",
+      "claim_value": "3 Stars (Global NCAP)",
+      "evidence_state": "VERIFIED",
+      "source_id": "src-gncap-2022-creta",
+      "verification_notes": "Global NCAP 2022 test result for Creta 2nd gen Indian specification."
+    },
+    {
+      "canonical_vehicle_id": "maruti-suzuki::swift::gen-3-2018",
+      "hierarchy_level": "GENERATION",
+      "attribute_category": "SAFETY",
+      "attribute_key": "adult_occupant_crash_rating",
+      "claim_value": "2 Stars (Global NCAP)",
+      "evidence_state": "VERIFIED",
+      "source_id": "src-gncap-2018-swift",
+      "verification_notes": "Global NCAP 2018 test report for Maruti Suzuki Swift 3rd generation."
+    },
+    {
+      "canonical_vehicle_id": "mahindra::thar::gen-2-2020",
+      "hierarchy_level": "GENERATION",
+      "attribute_category": "SAFETY",
+      "attribute_key": "adult_occupant_crash_rating",
+      "claim_value": "4 Stars (Global NCAP)",
+      "evidence_state": "VERIFIED",
+      "source_id": "src-gncap-2020-thar",
+      "verification_notes": "Global NCAP 2020 rating for Mahindra Thar 2nd Gen."
+    },
+    {
+      "canonical_vehicle_id": "maruti-suzuki::swift",
+      "hierarchy_level": "MODEL",
+      "attribute_category": "RESALE",
+      "attribute_key": "historical_listing_volume_rank",
+      "claim_value": "Rank 1 (2,314 normalized listings, 4.03% total market share)",
+      "evidence_state": "EMPIRICAL",
+      "source_id": "src-empirical-listings-57480",
+      "verification_notes": "Highest volume used vehicle model in the 57,480-record listing baseline."
+    },
+    {
+      "canonical_vehicle_id": "hyundai::creta",
+      "hierarchy_level": "MODEL",
+      "attribute_category": "RESALE",
+      "attribute_key": "historical_listing_volume_rank",
+      "claim_value": "Rank 2 (1,777 normalized listings, 3.09% total market share)",
+      "evidence_state": "EMPIRICAL",
+      "source_id": "src-empirical-listings-57480",
+      "verification_notes": "Second highest volume model and highest volume SUV in the 57,480 listing baseline."
+    }
+  ]
+}

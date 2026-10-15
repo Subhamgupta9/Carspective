@@ -1,0 +1,12 @@
+Column Name,Data Type,Unique Count,Missing Count,Likely Role,Initial Interpretation,Potential Data Quality Concern
+Unnamed: 0,int64,57480,0,Identifier,Observed column; meaning has not been confirmed from external documentation.,Zero numerical values; High cardinality
+price,int64,3372,0,Target Candidate,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+manufacturing_year,int64,35,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+model,str,1200,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+km_driven,str,10502,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+fuel_type,str,9,28,Feature,Observed column; meaning has not been confirmed from external documentation.,Missing values
+transmission_type,str,8,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+brand,str,47,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+city,str,1468,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+bodytype,str,18,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks
+number_of_owners,int64,6,0,Feature,Observed column; meaning has not been confirmed from external documentation.,None flagged by initial checks

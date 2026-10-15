@@ -1,0 +1,423 @@
+{
+  "dataset_semantics": "57,480 historical Indian used-car listing records (Seller Asking Price Baseline)",
+  "total_records": 57480,
+  "manufacturers_summary": {
+    "total_unique": 47,
+    "top_manufacturers": {
+      "Maruti": 10916,
+      "Hyundai": 10507,
+      "Maruti Suzuki": 6221,
+      "Mahindra": 4780,
+      "Tata": 4640,
+      "Honda": 3088,
+      "Toyota": 2230,
+      "Renault": 1983,
+      "Kia": 1848,
+      "Mercedes-Benz": 1838,
+      "Ford": 1441,
+      "BMW": 1272,
+      "Volkswagen": 1084,
+      "Audi": 1015,
+      "Skoda": 857
+    },
+    "all_manufacturers": {
+      "Maruti": 10916,
+      "Hyundai": 10507,
+      "Maruti Suzuki": 6221,
+      "Mahindra": 4780,
+      "Tata": 4640,
+      "Honda": 3088,
+      "Toyota": 2230,
+      "Renault": 1983,
+      "Kia": 1848,
+      "Mercedes-Benz": 1838,
+      "Ford": 1441,
+      "BMW": 1272,
+      "Volkswagen": 1084,
+      "Audi": 1015,
+      "Skoda": 857,
+      "MG": 792,
+      "Nissan": 526,
+      "Jeep": 502,
+      "Chevrolet": 487,
+      "Land Rover": 294,
+      "Datsun": 269,
+      "Volvo": 212,
+      "Jaguar": 175,
+      "Fiat": 106,
+      "Mini": 101,
+      "Porsche": 59,
+      "Citroen": 40,
+      "Lexus": 29,
+      "Mitsubishi": 29,
+      "Isuzu": 24,
+      "BYD": 21,
+      "Maserati": 15,
+      "Mahindra Renault": 11,
+      "Rolls-Royce": 11,
+      "Mahindra Ssangyong": 9,
+      "Force": 9,
+      "Force Motors": 7,
+      "Mahindra-Renault": 7,
+      "Ssangyong": 6,
+      "Ashok Leyland": 5,
+      "Lamborghini": 5,
+      "Aston Martin": 3,
+      "Hindustan Motors": 2,
+      "Opel": 1,
+      "Bajaj": 1,
+      "Bugatti": 1,
+      "Bentley": 1
+    }
+  },
+  "models_summary": {
+    "total_unique_models": 1200,
+    "cdf_milestones": {
+      "50%_volume": {
+        "model_rank": 67,
+        "model_name": "Maruti S Cross",
+        "brand": "Maruti",
+        "cumulative_pct": 50.082,
+        "cumulative_listings": 28787
+      },
+      "60%_volume": {
+        "model_rank": 105,
+        "model_name": "Toyota Etios",
+        "brand": "Toyota",
+        "cumulative_pct": 60.148,
+        "cumulative_listings": 34573
+      },
+      "70%_volume": {
+        "model_rank": 160,
+        "model_name": "Maruti Zen Estilo",
+        "brand": "Maruti",
+        "cumulative_pct": 70.07,
+        "cumulative_listings": 40276
+      },
+      "75%_volume": {
+        "model_rank": 199,
+        "model_name": "Maruti Wagon R Stingray",
+        "brand": "Maruti",
+        "cumulative_pct": 75.047,
+        "cumulative_listings": 43137
+      },
+      "80%_volume": {
+        "model_rank": 248,
+        "model_name": "GLS [2020-2024]",
+        "brand": "Mercedes-Benz",
+        "cumulative_pct": 80.017,
+        "cumulative_listings": 45994
+      },
+      "85%_volume": {
+        "model_rank": 315,
+        "model_name": "2 Series Gran Coupe [2020-2025]",
+        "brand": "BMW",
+        "cumulative_pct": 85.03,
+        "cumulative_listings": 48875
+      },
+      "90%_volume": {
+        "model_rank": 411,
+        "model_name": "Chevrolet Enjoy",
+        "brand": "Chevrolet",
+        "cumulative_pct": 90.016,
+        "cumulative_listings": 51741
+      },
+      "95%_volume": {
+        "model_rank": 565,
+        "model_name": "Venue N Line [2023-2025]",
+        "brand": "Hyundai",
+        "cumulative_pct": 95.016,
+        "cumulative_listings": 54615
+      }
+    },
+    "volume_thresholds": {
+      "min_1000_listings": {
+        "model_count": 5,
+        "cumulative_listings": 6464,
+        "cumulative_pct": 11.25
+      },
+      "min_500_listings": {
+        "model_count": 20,
+        "cumulative_listings": 16676,
+        "cumulative_pct": 29.01
+      },
+      "min_300_listings": {
+        "model_count": 30,
+        "cumulative_listings": 20452,
+        "cumulative_pct": 35.58
+      },
+      "min_200_listings": {
+        "model_count": 58,
+        "cumulative_listings": 27053,
+        "cumulative_pct": 47.07
+      },
+      "min_100_listings": {
+        "model_count": 138,
+        "cumulative_listings": 38287,
+        "cumulative_pct": 66.61
+      },
+      "min_50_listings": {
+        "model_count": 257,
+        "cumulative_listings": 46454,
+        "cumulative_pct": 80.82
+      },
+      "min_20_listings": {
+        "model_count": 476,
+        "cumulative_listings": 53187,
+        "cumulative_pct": 92.53
+      },
+      "min_10_listings": {
+        "model_count": 644,
+        "cumulative_listings": 55494,
+        "cumulative_pct": 96.54
+      }
+    }
+  },
+  "fuel_distribution": {
+    "Petrol": 33573,
+    "Diesel": 21079,
+    "CNG": 1858,
+    "Electric": 589,
+    "LPG": 171,
+    "Hybrid (Electric + Petrol)": 146,
+    "nan": 28,
+    "Mild Hybrid(Electric + Petrol)": 24,
+    "Mild Hybrid (Electric + Diesel)": 10,
+    "Plug-in Hybrid (Electric + Petrol)": 2
+  },
+  "transmission_distribution": {
+    "Manual": 43361,
+    "Automatic": 9942,
+    "Automatic (TC)": 2052,
+    "Automatic (DCT)": 728,
+    "Automatic (AMT)": 688,
+    "Automatic (CVT)": 481,
+    "Clutchless Manual (IMT)": 124,
+    "Automatic (e-CVT)": 104
+  },
+  "body_type_distribution": {
+    "Hatchback": 21696,
+    "SUV": 18523,
+    "Sedan": 10543,
+    "MUV": 2034,
+    "CompactSuv": 1598,
+    "CompactSedan": 1012,
+    "MPV_MUV": 789,
+    "Minivan": 517,
+    "SubCompactSuv": 351,
+    "FullSizeSuv": 146,
+    "Coupe": 131,
+    "Pickup Trucks": 58,
+    "Convertible": 30,
+    "15": 18,
+    "Truck": 15,
+    "SuvCoupe": 13,
+    "Wagon": 5,
+    "StationWagon": 1
+  },
+  "city_summary": {
+    "total_unique_cities": 1468,
+    "top_cities": {
+      "Mumbai": 1308,
+      "New Delhi": 972,
+      "Pune": 723,
+      "Chennai": 664,
+      "Bangalore": 664,
+      "Hyderabad": 627,
+      "Jaipur": 625,
+      "Ahmedabad": 611,
+      "Kolkata": 595,
+      "Gurgaon": 582,
+      "Lucknow": 568,
+      "Thane": 544,
+      "Indore": 509,
+      "Nagpur": 504,
+      "Surat": 501,
+      "Noida": 481,
+      "Faridabad": 476,
+      "Ghaziabad": 444,
+      "Kanpur": 421,
+      "Chandigarh": 361
+    }
+  },
+  "numeric_statistics": {
+    "price": {
+      "invalid_non_numeric_count": 0,
+      "invalid_samples": [],
+      "min": 15000.0,
+      "p01": 70000.0,
+      "p25": 340000.0,
+      "median": 550000.0,
+      "mean": 996082.54,
+      "p75": 988916.0,
+      "p99": 8300000.0,
+      "max": 200000000.0
+    },
+    "km_driven": {
+      "invalid_non_numeric_count": 0,
+      "invalid_samples": [],
+      "min": 2.0,
+      "p01": 3000.0,
+      "median": 63000.0,
+      "mean": 72688.27,
+      "p99": 230000.0,
+      "max": 3750000.0
+    },
+    "year": {
+      "invalid_non_numeric_count": 0,
+      "invalid_samples": [],
+      "min": 1989,
+      "median": 2018,
+      "max": 2025,
+      "distribution": {
+        "1989": 1,
+        "1990": 1,
+        "1992": 1,
+        "1994": 1,
+        "1995": 2,
+        "1996": 7,
+        "1997": 3,
+        "1998": 11,
+        "1999": 14,
+        "2000": 28,
+        "2001": 37,
+        "2002": 26,
+        "2003": 49,
+        "2004": 80,
+        "2005": 168,
+        "2006": 221,
+        "2007": 331,
+        "2008": 414,
+        "2009": 629,
+        "2010": 1196,
+        "2011": 1711,
+        "2012": 2281,
+        "2013": 2493,
+        "2014": 2970,
+        "2015": 3422,
+        "2016": 4110,
+        "2017": 4597,
+        "2018": 5083,
+        "2019": 4473,
+        "2020": 3968,
+        "2021": 4847,
+        "2022": 5412,
+        "2023": 4563,
+        "2024": 3049,
+        "2025": 1281
+      }
+    },
+    "owners": {
+      "1": 39385,
+      "2": 12481,
+      "3": 3752,
+      "4": 843,
+      "5": 673,
+      "6": 346
+    }
+  },
+  "data_quality_anomalies": {
+    "duplicate_rows_count": 0,
+    "missing_fields": {
+      "Unnamed: 0": 0,
+      "price": 0,
+      "manufacturing_year": 0,
+      "model": 0,
+      "km_driven": 0,
+      "fuel_type": 28,
+      "transmission_type": 0,
+      "brand": 0,
+      "city": 0,
+      "bodytype": 0,
+      "number_of_owners": 0
+    },
+    "missing_fields_pct": {
+      "Unnamed: 0": 0.0,
+      "price": 0.0,
+      "manufacturing_year": 0.0,
+      "model": 0.0,
+      "km_driven": 0.0,
+      "fuel_type": 0.049,
+      "transmission_type": 0.0,
+      "brand": 0.0,
+      "city": 0.0,
+      "bodytype": 0.0,
+      "number_of_owners": 0.0
+    },
+    "zero_or_negative_price": 0,
+    "extremely_low_price_sub_25k": 3,
+    "extremely_high_price_above_1cr": 282,
+    "zero_or_negative_km": 0,
+    "extremely_high_km_above_500k": 113,
+    "suspicious_years_pre_1995": 4,
+    "future_years_post_2026": 0,
+    "malformed_bodytypes": [
+      "15"
+    ],
+    "rare_models_single_listing": 136,
+    "models_with_under_10_listings": 556,
+    "brand_embedded_in_model_count": 403,
+    "brand_embedded_in_model_samples": [
+      {
+        "brand": "Kia",
+        "raw_model": "Kia Sonet"
+      },
+      {
+        "brand": "Kia",
+        "raw_model": "Kia Seltos"
+      },
+      {
+        "brand": "Kia",
+        "raw_model": "Kia Carens"
+      },
+      {
+        "brand": "Kia",
+        "raw_model": "Kia Syros"
+      },
+      {
+        "brand": "Kia",
+        "raw_model": "Kia Carens Clavis"
+      },
+      {
+        "brand": "Kia",
+        "raw_model": "Kia Carnival"
+      },
+      {
+        "brand": "Citroen",
+        "raw_model": "Citroen Basalt"
+      },
+      {
+        "brand": "Citroen",
+        "raw_model": "Citroen C3"
+      },
+      {
+        "brand": "Citroen",
+        "raw_model": "Citroen Aircross"
+      },
+      {
+        "brand": "Citroen",
+        "raw_model": "Citroen eC3"
+      },
+      {
+        "brand": "Citroen",
+        "raw_model": "Citroen C5 Aircross"
+      },
+      {
+        "brand": "Renault",
+        "raw_model": "Renault Kiger"
+      },
+      {
+        "brand": "Renault",
+        "raw_model": "Renault Triber"
+      },
+      {
+        "brand": "Renault",
+        "raw_model": "Renault KWID"
+      },
+      {
+        "brand": "Renault",
+        "raw_model": "Renault Duster"
+      }
+    ]
+  }
+}

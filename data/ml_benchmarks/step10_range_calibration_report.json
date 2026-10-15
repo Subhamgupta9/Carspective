@@ -1,0 +1,19 @@
+{
+  "methodology": "Empirical Multiplicative Conformal Residual Quantiles fitted on calibration fold and validated on unseen evaluation fold.",
+  "nominal_80_percent_interval": {
+    "multiplier_q80": 0.21783412194872057,
+    "formula": "predicted_value * (1.0 \u00b1 multiplier_q80)",
+    "empirical_coverage_percent": 80.04523312456506,
+    "target_coverage_percent": 80.0,
+    "sharpness_median_width_percent": 43.566824389744106,
+    "calibration_status": "CALIBRATED (Empirical coverage strictly aligns with nominal confidence)"
+  },
+  "nominal_90_percent_interval": {
+    "multiplier_q90": 0.3144798869046467,
+    "formula": "predicted_value * (1.0 \u00b1 multiplier_q90)",
+    "empirical_coverage_percent": 90.1356993736952,
+    "target_coverage_percent": 90.0,
+    "sharpness_median_width_percent": 62.895977380929324,
+    "calibration_status": "CALIBRATED (Empirical coverage strictly aligns with nominal confidence)"
+  }
+}

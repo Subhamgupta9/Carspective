@@ -1,0 +1,4 @@
+Concern,Column(s),Evidence,Requires investigation
+Missing values,fuel_type,28 missing (0.05%).,Yes
+Zero numerical values,Unnamed: 0,1 zero values observed; context is needed to judge them.,Yes
+High cardinality,Unnamed: 0,"57,480 unique values (100.00%).",Yes

@@ -1,0 +1,12 @@
+Column,Data Type,Missing Count,Missing Percentage,Non-Missing Count
+fuel_type,str,28,0.05,57452
+Unnamed: 0,int64,0,0.0,57480
+bodytype,str,0,0.0,57480
+brand,str,0,0.0,57480
+city,str,0,0.0,57480
+km_driven,str,0,0.0,57480
+manufacturing_year,int64,0,0.0,57480
+model,str,0,0.0,57480
+number_of_owners,int64,0,0.0,57480
+price,int64,0,0.0,57480
+transmission_type,str,0,0.0,57480
