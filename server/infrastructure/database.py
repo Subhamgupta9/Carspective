@@ -13,28 +13,33 @@ from server.config import settings
 from server.config.settings import normalize_database_url, mask_database_url
 from server.models.base import Base
 
+def get_engine_kwargs(db_url: str) -> dict:
+    """Return dialect-appropriate create_engine keyword arguments for a database URL."""
+    normalized = normalize_database_url(db_url)
+    kwargs = {
+        "echo": False,
+        "future": True,
+        "pool_pre_ping": True,
+    }
+    if normalized.startswith("sqlite"):
+        kwargs["connect_args"] = {
+            "check_same_thread": False,
+            "timeout": 30.0,
+        }
+    else:
+        # Server-class database settings (PostgreSQL, MySQL, etc.)
+        kwargs.update({
+            "pool_size": 10,
+            "max_overflow": 20,
+            "pool_recycle": 1800,
+            "pool_timeout": 30.0,
+        })
+    return kwargs
+
+
 normalized_db_url = normalize_database_url(settings.DATABASE_URL)
 is_sqlite = normalized_db_url.startswith("sqlite")
-
-engine_kwargs = {
-    "echo": False,
-    "future": True,
-    "pool_pre_ping": True,
-}
-
-if is_sqlite:
-    engine_kwargs["connect_args"] = {
-        "check_same_thread": False,
-        "timeout": 30.0,
-    }
-else:
-    # Server-class database settings (PostgreSQL, MySQL, etc.)
-    engine_kwargs.update({
-        "pool_size": 10,
-        "max_overflow": 20,
-        "pool_recycle": 1800,
-        "pool_timeout": 30.0,
-    })
+engine_kwargs = get_engine_kwargs(settings.DATABASE_URL)
 
 engine = create_engine(
     normalized_db_url,

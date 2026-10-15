@@ -343,24 +343,35 @@ def test_existing_database_preservation():
 def test_postgresql_configuration_parameters():
     """Inspects engine settings to verify PostgreSQL pool parameters are specified when configured."""
     from server.infrastructure import database
-
-    # Verify that engine_kwargs differentiates SQLite and PostgreSQL
-    assert database.is_sqlite is True  # Current development database is SQLite
-
-    # Verify what kwargs are selected for server databases (e.g. PostgreSQL)
     from server.config.settings import Settings
-    custom_settings = Settings()
-    custom_settings.DATABASE_URL = "postgresql+psycopg2://user:pass@localhost:5432/carspective"
-    
-    # Check that postgresql config applies pool settings
-    is_pg = custom_settings.DATABASE_URL.startswith("postgresql")
-    assert is_pg is True
-    pg_kwargs = {
-        "pool_size": 10,
-        "max_overflow": 20,
-        "pool_recycle": 1800,
-        "pool_timeout": 30.0,
-        "pool_pre_ping": True,
-    }
+
+    # 1. Verify default Settings behavior for local development
+    default_settings = Settings()
+    if not os.getenv("DATABASE_URL"):
+        # Without explicit environment override, default database URL is SQLite
+        assert default_settings.DATABASE_URL.startswith("sqlite")
+
+    # 2. Verify dialect differentiation: SQLite vs PostgreSQL
+    sqlite_kwargs = database.get_engine_kwargs("sqlite:///:memory:")
+    assert sqlite_kwargs["pool_pre_ping"] is True
+    assert sqlite_kwargs["connect_args"]["check_same_thread"] is False
+    assert "pool_size" not in sqlite_kwargs
+
+    pg_url = "postgresql+psycopg2://user:pass@localhost:5432/carspective"
+    pg_kwargs = database.get_engine_kwargs(pg_url)
     assert pg_kwargs["pool_pre_ping"] is True
+    assert pg_kwargs["pool_size"] == 10
+    assert pg_kwargs["max_overflow"] == 20
     assert pg_kwargs["pool_recycle"] == 1800
+    assert pg_kwargs["pool_timeout"] == 30.0
+    assert "connect_args" not in pg_kwargs
+
+    # 3. Verify active runtime engine reflects environment configuration without drift
+    assert database.is_sqlite == database.normalized_db_url.startswith("sqlite")
+    if not database.is_sqlite:
+        # In PostgreSQL environment (e.g. CI PostgreSQL job), verify runtime pool parameters
+        assert database.engine_kwargs.get("pool_size") == 10
+        assert database.engine_kwargs.get("max_overflow") == 20
+        assert database.engine_kwargs.get("pool_recycle") == 1800
+        assert database.engine_kwargs.get("pool_timeout") == 30.0
+        assert database.engine.pool._pre_ping is True
