@@ -174,38 +174,104 @@ def test_concurrent_search_session_isolation():
     """
     Verify that concurrent search requests executed in separate threads
     maintain strict session isolation with no cross-thread contamination or locking errors.
-    Uses the disposable Phase 20 drill database.
+    Uses an isolated self-contained temporary database seeded with canonical taxonomy.
     """
-    import os
+    import tempfile
+    import shutil
+    from pathlib import Path
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-
-    disp_db_path = "data/phase20_load_drill/carspective_load.db"
-    assert os.path.exists(disp_db_path), f"Disposable database not found at {disp_db_path}"
-
-    engine = create_engine(
-        f"sqlite:///{disp_db_path}",
-        connect_args={"check_same_thread": False, "timeout": 30.0},
-        future=True
+    from server.models.base import Base
+    from scripts.generate_and_load_seeds import build_seed_data
+    from server.models.taxonomy import (
+        Manufacturer,
+        VehicleModel,
+        VehicleGeneration,
+        ModelYear,
+        VehicleVariant,
+        PowertrainConfiguration,
     )
-    SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
 
-    def worker_search(query_str: str):
-        thread_session = SessionLocal()
+    temp_dir = tempfile.mkdtemp()
+    temp_db_path = Path(temp_dir) / "test_search_concurrent.db"
+
+    try:
+        engine = create_engine(
+            f"sqlite:///{temp_db_path.as_posix()}",
+            connect_args={"check_same_thread": False, "timeout": 30.0},
+            future=True,
+        )
+        Base.metadata.create_all(bind=engine)
+
+        SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
+        init_sess = SessionLocal()
         try:
-            service = KnowledgeService(session=thread_session)
-            results = service.search_vehicles(query=query_str, limit=10)
-            return len(results), [r["canonical_vehicle_id"] for r in results]
+            seed = build_seed_data()
+            for m_data in seed["manufacturers"]:
+                m_obj = Manufacturer(name=m_data["name"], slug=m_data["slug"], is_active=True)
+                init_sess.add(m_obj)
+                init_sess.flush()
+                for mod_data in m_data.get("models", []):
+                    mod_obj = VehicleModel(
+                        manufacturer_id=m_obj.id,
+                        name=mod_data["name"],
+                        slug=mod_data["slug"],
+                        body_type=mod_data["body_type"],
+                        is_active=True,
+                    )
+                    init_sess.add(mod_obj)
+                    init_sess.flush()
+                    for gen_data in mod_data.get("generations", []):
+                        gen_obj = VehicleGeneration(
+                            model_id=mod_obj.id,
+                            name=gen_data["name"],
+                            slug=gen_data["slug"],
+                            year_start=gen_data["year_start"],
+                        )
+                        init_sess.add(gen_obj)
+                        init_sess.flush()
+                        for yr in gen_data.get("years", []):
+                            init_sess.add(ModelYear(generation_id=gen_obj.id, calendar_year=yr))
+                        for var_data in gen_data.get("variants", []):
+                            var_obj = VehicleVariant(
+                                generation_id=gen_obj.id,
+                                name=var_data["name"],
+                                slug=var_data["slug"],
+                                trim_level=var_data.get("trim_level"),
+                            )
+                            init_sess.add(var_obj)
+                            init_sess.flush()
+                            for pt_data in var_data.get("powertrains", []):
+                                init_sess.add(
+                                    PowertrainConfiguration(
+                                        variant_id=var_obj.id,
+                                        fuel_type=pt_data["fuel_type"],
+                                        transmission_type=pt_data["transmission_type"],
+                                        slug=pt_data.get("slug"),
+                                    )
+                                )
+            init_sess.commit()
         finally:
-            thread_session.close()
+            init_sess.close()
 
-    queries = ["Swift", "Creta", "Nexon", "City", "Baleno"] * 3
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = [executor.submit(worker_search, q) for q in queries]
-        results = [f.result() for f in futures]
+        def worker_search(query_str: str):
+            thread_session = SessionLocal()
+            try:
+                service = KnowledgeService(session=thread_session)
+                results = service.search_vehicles(query=query_str, limit=10)
+                return len(results), [r["canonical_vehicle_id"] for r in results]
+            finally:
+                thread_session.close()
 
-    assert len(results) == len(queries)
-    for count, ids in results:
-        assert count > 0
-        assert all("::" in cid for cid in ids)
-    engine.dispose()
+        queries = ["Swift", "Creta", "Nexon", "City", "Baleno"] * 3
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(worker_search, q) for q in queries]
+            results = [f.result() for f in futures]
+
+        assert len(results) == len(queries)
+        for count, ids in results:
+            assert count > 0
+            assert all("::" in cid for cid in ids)
+    finally:
+        engine.dispose()
+        shutil.rmtree(temp_dir, ignore_errors=True)

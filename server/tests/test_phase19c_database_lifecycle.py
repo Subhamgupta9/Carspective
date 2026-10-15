@@ -304,10 +304,18 @@ def test_production_startup_prohibits_automated_create_all():
 # ==============================================================================
 
 def test_existing_database_preservation():
-    """Verifies that data/database/carspective.db exists with complete data rows when present."""
-    db_path = Path("data/database/carspective.db")
+    """Verifies that data/database/carspective.db (or an isolated populated fixture) exists with complete data rows."""
+    target_db = os.getenv("TEST_PRESERVED_DB_PATH")
+    if not target_db:
+        # In clean CI runners, data/database/carspective.db is a freshly migrated test database (created by CI setup),
+        # not the preserved local development database. Historical market observations are absent in clean CI.
+        if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
+            pytest.skip("Running in CI environment: data/database/carspective.db is a fresh migration without populated market data.")
+        target_db = "data/database/carspective.db"
+
+    db_path = Path(target_db)
     if not db_path.exists():
-        pytest.skip("Local data/database/carspective.db does not exist (e.g. in clean CI environment).")
+        pytest.skip(f"Database {target_db} does not exist (e.g. clean clone).")
 
     import sqlite3
     conn = sqlite3.connect(f"file:{db_path.resolve().as_posix()}?mode=ro", uri=True)
@@ -315,19 +323,17 @@ def test_existing_database_preservation():
     try:
         tables = [r[0] for r in cur.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
         if "current_market_observations" not in tables:
-            pytest.skip("Local carspective.db does not contain market observations table.")
+            pytest.skip(f"{target_db} does not contain market observations table.")
         obs_count = cur.execute("SELECT COUNT(*) FROM current_market_observations;").fetchone()[0]
         batch_count = cur.execute("SELECT COUNT(*) FROM ingestion_batches;").fetchone()[0]
         mfg_count = cur.execute("SELECT COUNT(*) FROM manufacturers;").fetchone()[0]
     finally:
         conn.close()
 
-    if obs_count == 0:
-        pytest.skip("Local carspective.db does not contain market observations (fresh CI migration).")
-
     assert obs_count >= 900, f"Expected >= 900 observations, got {obs_count}"
     assert batch_count >= 20, f"Expected >= 20 ingestion batches, got {batch_count}"
     assert mfg_count >= 7, f"Expected >= 7 manufacturers, got {mfg_count}"
+
 
 
 # ==============================================================================

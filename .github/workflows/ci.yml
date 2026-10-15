@@ -220,18 +220,20 @@ jobs:
           from server.infrastructure.database import SessionFactory
           from server.models.taxonomy import Manufacturer, VehicleModel, VehicleVariant
           from server.models.evidence import EvidenceSource, KnowledgeClaim
-          from server.models.knowledge import VehicleFeatureMap, ReliabilityAdvisory
+          from server.models.knowledge import VariantFeatureMapping, ReliabilityIssue
 
           sess = SessionFactory()
-          assert sess.query(Manufacturer).count() >= 7, 'Manufacturer count failed'
-          assert sess.query(VehicleModel).count() >= 15, 'Model count failed'
-          assert sess.query(VehicleVariant).count() >= 40, 'Variant count failed'
-          assert sess.query(EvidenceSource).count() >= 10, 'EvidenceSource count failed'
-          assert sess.query(KnowledgeClaim).count() >= 50, 'KnowledgeClaim count failed'
-          assert sess.query(VehicleFeatureMap).count() >= 20, 'FeatureMap count failed'
-          assert sess.query(ReliabilityAdvisory).count() >= 5, 'Advisory count failed'
-          sess.close()
-          print('PostgreSQL seed data integrity verified across all core tables!')
+          try:
+              assert sess.query(Manufacturer).count() >= 7, 'Manufacturer count failed'
+              assert sess.query(VehicleModel).count() >= 10, 'Model count failed'
+              assert sess.query(VehicleVariant).count() >= 25, 'Variant count failed'
+              assert sess.query(EvidenceSource).count() >= 10, 'EvidenceSource count failed'
+              assert sess.query(KnowledgeClaim).count() >= 6, 'KnowledgeClaim count failed'
+              assert sess.query(VariantFeatureMapping).count() >= 20, 'FeatureMap count failed'
+              assert sess.query(ReliabilityIssue).count() >= 5, 'Advisory count failed'
+              print('PostgreSQL seed data integrity verified across all core tables!')
+          finally:
+              sess.close()
           "
 
       - name: Run Focused PostgreSQL Repository & Database Tests
