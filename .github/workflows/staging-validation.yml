@@ -1,0 +1,438 @@
+name: CarSpective Staging Validation
+
+'on':
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: 'Days to retain sanitized diagnostic artifacts on failure'
+        required: false
+        default: '3'
+
+concurrency:
+  group: staging-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  staging-validation:
+    name: Ephemeral Staging Infrastructure Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      # ========================================================================
+      # 1. REPOSITORY CHECKOUT & HOST PREREQUISITES
+      # ========================================================================
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.2.2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v5.4.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Host Tools & Python Dependencies
+        run: |
+          echo "Configuring official PostgreSQL PGDG apt repository for PostgreSQL 16 client..."
+          sudo install -d /etc/apt/keyrings
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+
+          echo "Installing host CLI tools: postgresql-client-16, jq, curl, openssl..."
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-16 jq curl openssl
+
+          echo "Verifying PostgreSQL client tools match server major version (16.x)..."
+          pg_dump --version
+          pg_restore --version
+          pg_dump --version | grep -E "16\."
+          pg_restore --version | grep -E "16\."
+
+          echo "Installing Python production and database dependencies..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ========================================================================
+      # 2. INVARIANT INTEGRITY VERIFICATION
+      # ========================================================================
+      - name: Verify Model & Database Baseline Invariants
+        run: |
+          python -c "
+          import hashlib
+
+          model_path = 'models/carspective_valuation_lgbm_v1.joblib'
+          expected_model_sha = '4a4ccf3f78c17b48826cfa55f40a24bcb808bc82fa752b793ad4eabff8b246c1'
+          with open(model_path, 'rb') as f:
+              actual_model_sha = hashlib.sha256(f.read()).hexdigest()
+          assert actual_model_sha == expected_model_sha, f'Model hash mismatch: {actual_model_sha}'
+
+          db_path = 'data/database/carspective.db'
+          expected_db_sha = 'cb655c06225c07af98a85a1171595d3c0d368db4e270c3170d57f96a874209e9'
+          with open(db_path, 'rb') as f:
+              actual_db_sha = hashlib.sha256(f.read()).hexdigest()
+          assert actual_db_sha == expected_db_sha, f'Baseline DB hash mismatch: {actual_db_sha}'
+
+          print('Preflight asset invariants VERIFIED successfully.')
+          "
+
+      # ========================================================================
+      # 3. EPHEMERAL SECRETS & STAGING TLS CERTIFICATE SETUP
+      # ========================================================================
+      - name: Generate Ephemeral Staging Secrets & TLS Certificate
+        run: |
+          echo "Generating isolated staging working directories..."
+          STAGING_DIR=$(mktemp -d /tmp/carspective-staging-XXXXXX)
+          mkdir -p "$STAGING_DIR/certs" "$STAGING_DIR/secrets" "$STAGING_DIR/backups" "$STAGING_DIR/diagnostics"
+
+          # Generate strong, random staging secrets (never saved to repository)
+          POSTGRES_PWD=$(openssl rand -hex 16)
+          SECRET_KEY_VAL=$(openssl rand -hex 32)
+          ADMIN_KEY_VAL=$(openssl rand -hex 32)
+
+          # Register masks so runner logs redact these strings automatically
+          echo "::add-mask::$POSTGRES_PWD"
+          echo "::add-mask::$SECRET_KEY_VAL"
+          echo "::add-mask::$ADMIN_KEY_VAL"
+
+          # Write Prometheus bearer token secret file with read permissions for UID 65534 (nobody)
+          PROM_SECRET_PATH="$STAGING_DIR/secrets/admin_api_key"
+          echo -n "$ADMIN_KEY_VAL" > "$PROM_SECRET_PATH"
+          chmod 644 "$PROM_SECRET_PATH"
+
+          # Generate self-signed staging TLS certificate valid for localhost, gateway, and IP 127.0.0.1
+          echo "Generating temporary self-signed staging TLS certificate pair..."
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout "$STAGING_DIR/certs/carspective.key" \
+            -out "$STAGING_DIR/certs/carspective.crt" \
+            -days 1 \
+            -subj "/CN=localhost/O=CarSpective Staging Validation" \
+            -addext "subjectAltName=DNS:localhost,DNS:gateway,IP:127.0.0.1"
+
+          chmod 600 "$STAGING_DIR/certs/carspective.key"
+          chmod 644 "$STAGING_DIR/certs/carspective.crt"
+
+          # Export required Compose environment variables
+          echo "STAGING_TMP_DIR=$STAGING_DIR" >> "$GITHUB_ENV"
+          echo "POSTGRES_PASSWORD=$POSTGRES_PWD" >> "$GITHUB_ENV"
+          echo "SECRET_KEY=$SECRET_KEY_VAL" >> "$GITHUB_ENV"
+          echo "ADMIN_API_KEY=$ADMIN_KEY_VAL" >> "$GITHUB_ENV"
+          echo "TLS_CERT_DIR=$STAGING_DIR/certs" >> "$GITHUB_ENV"
+          echo "PROMETHEUS_ADMIN_KEY_FILE=$PROM_SECRET_PATH" >> "$GITHUB_ENV"
+          echo "ALLOWED_HOSTS=localhost,127.0.0.1,gateway,api,carspective.internal" >> "$GITHUB_ENV"
+          echo "CORS_ALLOWED_ORIGINS=https://localhost,http://localhost" >> "$GITHUB_ENV"
+
+      # ========================================================================
+      # 4. MULTI-CONTAINER STACK BUILD & STARTUP
+      # ========================================================================
+      - name: Build & Launch Staging Production Compose Stack
+        run: |
+          echo "Building multi-stage container images from repository source..."
+          docker compose -f docker-compose.prod.yml --profile monitoring build
+
+          echo "Starting full staging stack (db, migrator, api, gateway, prometheus)..."
+          docker compose -f docker-compose.prod.yml --profile monitoring up -d
+
+      # ========================================================================
+      # 5. MIGRATION COMPLETION & HEALTHCHECK GATES
+      # ========================================================================
+      - name: Verify Schema Migrations & Service Health Gates
+        run: |
+          echo "Waiting for ephemeral migrator container to complete schema migrations..."
+          docker wait carspective-prod-migrator
+
+          MIGRATOR_EXIT=$(docker inspect carspective-prod-migrator --format='{{.State.ExitCode}}')
+          echo "Migrator exit code: $MIGRATOR_EXIT"
+          if [ "$MIGRATOR_EXIT" -ne 0 ]; then
+            echo "ERROR: Database migration failed!"
+            docker logs carspective-prod-migrator
+            exit 1
+          fi
+
+          echo "Alembic schema migrations completed successfully."
+
+          echo "Waiting for api and gateway services to transition to healthy (up to 90s)..."
+          for i in {1..45}; do
+            API_HEALTH=$(docker inspect carspective-prod-api --format='{{.State.Health.Status}}' 2>/dev/null || echo "unstarted")
+            GW_HEALTH=$(docker inspect carspective-prod-gateway --format='{{.State.Health.Status}}' 2>/dev/null || echo "unstarted")
+            echo "Attempt $i/45: API health=$API_HEALTH | Gateway health=$GW_HEALTH"
+
+            if [ "$API_HEALTH" = "healthy" ] && [ "$GW_HEALTH" = "healthy" ]; then
+              echo "All core services reported healthy!"
+              break
+            fi
+
+            if [ "$i" -eq 45 ]; then
+              echo "ERROR: Timed out waiting for API or Gateway healthcheck to pass!"
+              docker logs carspective-prod-api --tail 50 || true
+              docker logs carspective-prod-gateway --tail 50 || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+      # ========================================================================
+      # 6. NETWORK ISOLATION & PORT BINDING AUDIT
+      # ========================================================================
+      - name: Audit Port Exposure & Network Isolation
+        run: |
+          echo "Auditing host-published container ports..."
+          docker ps --format 'table {{.Names}}\t{{.Ports}}\t{{.Status}}'
+
+          PORT_MAPS=$(docker ps --format '{{.Names}}: {{.Ports}}')
+
+          # Fail closed if internal API (5001) or Database (5432) or Prometheus (9090) are published to host
+          if echo "$PORT_MAPS" | grep -v "carspective-prod-gateway" | grep -E "5001|5432|9090"; then
+            echo "CRITICAL SECURITY VIOLATION: Internal microservice ports are exposed to host!"
+            exit 1
+          fi
+
+          # Confirm gateway publishes 80 and 443
+          echo "$PORT_MAPS" | grep "carspective-prod-gateway" | grep -E "80->80|443->443"
+          echo "Network isolation & ingress port binding VERIFIED."
+
+      # ========================================================================
+      # 7. LIVE INGRESS, TLS & SECURITY HEADER AUDIT
+      # ========================================================================
+      - name: Validate Gateway Ingress, TLS & Security Headers
+        run: |
+          CACERT_PATH="$TLS_CERT_DIR/carspective.crt"
+
+          echo "1. Validating HTTPS liveness probe over port 443..."
+          LIVENESS_RESP=$(curl -s -S --cacert "$CACERT_PATH" https://localhost/health/liveness)
+          echo "$LIVENESS_RESP"
+          echo "$LIVENESS_RESP" | jq -e '.status == "UP"'
+          echo "$LIVENESS_RESP" | jq -e '.service == "carspective-api"'
+
+          echo "2. Validating gateway security headers..."
+          HEADERS=$(curl -s -S -I --cacert "$CACERT_PATH" https://localhost/health/liveness)
+          echo "$HEADERS"
+          echo "$HEADERS" | grep -i "X-Content-Type-Options: nosniff"
+          echo "$HEADERS" | grep -i "X-Frame-Options: DENY"
+          echo "$HEADERS" | grep -i "Referrer-Policy: strict-origin-when-cross-origin"
+          echo "$HEADERS" | grep -i "Content-Security-Policy:"
+
+          echo "3. Validating SPA static frontend delivery..."
+          CLIENT_HTML=$(curl -s -S --cacert "$CACERT_PATH" https://localhost/)
+          echo "$CLIENT_HTML" | grep -i "<html"
+          echo "$CLIENT_HTML" | grep -i "CARspective"
+
+          echo "4. Validating host-header spoofing rejection (DNS rebinding defense)..."
+          BAD_HOST_STATUS=$(curl -s -S -o /dev/null -w "%{http_code}" --cacert "$CACERT_PATH" -H "Host: attacker-spoofed-domain.com" https://localhost/health/liveness)
+          echo "Response code for untrusted host: $BAD_HOST_STATUS"
+          test "$BAD_HOST_STATUS" = "400"
+
+          echo "5. Validating RFC 7807 rate limiting on compute-intensive valuation route..."
+          # Burst 20 rapid POST requests exceeding the 15r/s zone limit
+          STATUS_CODES=$(for i in {1..20}; do
+            curl -s -S -o /dev/null -w "%{http_code}\n" --cacert "$CACERT_PATH" -X POST https://localhost/api/v1/valuation -H "Content-Type: application/json" -d '{}'
+          done)
+          echo "Status codes received during burst test:"
+          echo "$STATUS_CODES"
+          echo "$STATUS_CODES" | grep "429"
+
+          echo "Live gateway ingress & security policies VERIFIED."
+
+      # ========================================================================
+      # 8. SEED DATA POPULATION & READINESS PROBE VALIDATION
+      # ========================================================================
+      - name: Populate Seed Data & Verify Deep Readiness Probe
+        run: |
+          # Discover internal bridge IP of database container
+          DB_IP=$(docker inspect carspective-prod-db --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+          echo "Discovered staging PostgreSQL internal IP: $DB_IP"
+
+          export DATABASE_URL="postgresql+psycopg2://carspective:$POSTGRES_PASSWORD@$DB_IP:5432/carspective_prod"
+
+          echo "Populating canonical Tier 1 taxonomy seeds..."
+          python scripts/generate_and_load_seeds.py
+
+          echo "Verifying readiness probe transitions to READY (status 200)..."
+          CACERT_PATH="$TLS_CERT_DIR/carspective.crt"
+          READINESS_RESP=$(curl -s -S --cacert "$CACERT_PATH" https://localhost/health/readiness)
+          echo "$READINESS_RESP"
+          echo "$READINESS_RESP" | jq -e '.status == "READY"'
+          echo "$READINESS_RESP" | jq -e '.checks.database == "CONNECTED"'
+          echo "$READINESS_RESP" | jq -e '.checks.valuation_model == "VERIFIED"'
+          echo "$READINESS_RESP" | jq -e '.checks.taxonomy | startswith("READY")'
+
+          echo "Deep readiness verification PASSED."
+
+      # ========================================================================
+      # 9. OBSERVABILITY & PROMETHEUS SCRAPER AUDIT
+      # ========================================================================
+      - name: Verify Metrics Authentication & Prometheus Scraper
+        run: |
+          CACERT_PATH="$TLS_CERT_DIR/carspective.crt"
+
+          echo "1. Validating unauthorized /metrics request is rejected (401)..."
+          UNAUTH_METRICS=$(curl -s -S -o /dev/null -w "%{http_code}" --cacert "$CACERT_PATH" https://localhost/metrics)
+          echo "Status code without credentials: $UNAUTH_METRICS"
+          test "$UNAUTH_METRICS" = "401"
+
+          echo "2. Validating authenticated /metrics request returns Prometheus telemetry..."
+          AUTH_METRICS=$(curl -s -S --cacert "$CACERT_PATH" -H "Authorization: Bearer $ADMIN_API_KEY" https://localhost/metrics?format=prometheus)
+          echo "$AUTH_METRICS" | grep "carspective_http_requests_total"
+          echo "$AUTH_METRICS" | grep "carspective_database_failures_total"
+
+          echo "3. Querying internal Prometheus container for scrape target health..."
+          PROM_IP=$(docker inspect carspective-prod-prometheus --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+          echo "Discovered Prometheus container IP: $PROM_IP"
+
+          # Bounded poll for Prometheus scraper to complete scrape cycle of carspective-api
+          TARGET_HEALTH="unknown"
+          for i in {1..15}; do
+            TARGETS_JSON=$(curl -s -S "http://$PROM_IP:9090/api/v1/targets" 2>/dev/null || echo "{}")
+            TARGET_HEALTH=$(echo "$TARGETS_JSON" | jq -r '.data.activeTargets[] | select(.labels.job == "carspective-api") | .health' 2>/dev/null || echo "unknown")
+            echo "Attempt $i/15: Prometheus scrape target health=$TARGET_HEALTH"
+            if [ "$TARGET_HEALTH" = "up" ]; then
+              echo "Prometheus scrape target is UP!"
+              echo "$TARGETS_JSON" | jq '.data.activeTargets[] | {job: .labels.job, health: .health, lastError: .lastError}'
+              break
+            fi
+            sleep 2
+          done
+          test "$TARGET_HEALTH" = "up"
+
+          echo "4. Validating loaded Prometheus alert rules..."
+          RULES_JSON=$(curl -s -S "http://$PROM_IP:9090/api/v1/rules")
+          RULE_COUNT=$(echo "$RULES_JSON" | jq '.data.groups[0].rules | length')
+          echo "Loaded alert rules count: $RULE_COUNT"
+          test "$RULE_COUNT" -eq 5
+
+          echo "Prometheus telemetry, authentication & alert specifications VERIFIED."
+
+      # ========================================================================
+      # 10. POSTGRESQL BACKUP & DISPOSABLE RESTORE DRILL
+      # ========================================================================
+      - name: Execute PostgreSQL Backup & Isolated Target Restore Drill
+        run: |
+          DB_IP=$(docker inspect carspective-prod-db --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+          STAGING_PG_URL="postgresql://carspective:$POSTGRES_PASSWORD@$DB_IP:5432/carspective_prod"
+          RESTORE_TARGET_URL="postgresql://carspective:$POSTGRES_PASSWORD@$DB_IP:5432/carspective_restore_target"
+          BACKUP_DIR="$STAGING_TMP_DIR/backups"
+
+          echo "1. Inserting unique synthetic audit record into live staging database..."
+          export STAGING_PG_URL
+          python -c "
+          import os
+          import sqlalchemy as sa
+
+          db_url = os.environ['STAGING_PG_URL']
+          engine = sa.create_engine(db_url)
+          try:
+              with engine.connect() as conn:
+                  conn.execute(sa.text('''
+                      INSERT INTO manufacturers (id, name, slug, country_of_origin)
+                      VALUES ('mfg-synthetic-staging-audit', 'Synthetic Staging Motors', 'synthetic-staging-motors', 'Staging')
+                      ON CONFLICT (id) DO NOTHING;
+                  '''))
+                  conn.commit()
+              print('Synthetic audit record inserted.')
+          finally:
+              engine.dispose()
+          "
+
+          echo "2. Executing automated PostgreSQL backup..."
+          export PGPASSWORD="$POSTGRES_PASSWORD"
+          python scripts/backup_postgresql.py \
+            --db-url "$STAGING_PG_URL" \
+            --output-dir "$BACKUP_DIR" \
+            --retention-count 3 \
+            --json
+
+          BACKUP_FILE=$(find "$BACKUP_DIR" -name "*.dump" | head -n 1)
+          echo "Created backup archive: $BACKUP_FILE"
+          test -f "$BACKUP_FILE"
+          test -f "$BACKUP_FILE.manifest.json"
+
+          echo "3. Verifying companion manifest checksum & schema..."
+          python scripts/backup_postgresql.py --verify "$BACKUP_FILE" --json
+
+          echo "4. Creating separate empty disposable database for isolated recovery..."
+          psql -h "$DB_IP" -U carspective -d postgres -c "CREATE DATABASE carspective_restore_target;"
+
+          echo "5. Restoring backup archive into isolated disposable target database..."
+          # Target has 0 tables, requiring zero overwrite bypass
+          python scripts/restore_postgresql.py \
+            --backup-path "$BACKUP_FILE" \
+            --db-url "$RESTORE_TARGET_URL" \
+            --json
+
+          echo "6. Verifying synthetic record and schema revision in restored database..."
+          export RESTORE_TARGET_URL
+          python -c "
+          import os
+          import sqlalchemy as sa
+
+          db_url = os.environ['RESTORE_TARGET_URL']
+          engine = sa.create_engine(db_url)
+          try:
+              with engine.connect() as conn:
+                  row = conn.execute(sa.text(\"SELECT name FROM manufacturers WHERE id = 'mfg-synthetic-staging-audit';\")).fetchone()
+                  assert row and row[0] == 'Synthetic Staging Motors', f'Record missing in restored DB: {row}'
+
+                  rev = conn.execute(sa.text(\"SELECT version_num FROM alembic_version LIMIT 1;\")).fetchone()
+                  assert rev and rev[0] == 'f3d730c46a23', f'Revision mismatch: {rev}'
+
+                  tables = sorted(sa.inspect(engine).get_table_names())
+                  assert len(tables) >= 25, f'Insufficient tables in restored DB: {len(tables)}'
+
+              print('PostgreSQL isolated restoration & data integrity VERIFIED on separate database!')
+          finally:
+              engine.dispose()
+          "
+
+          echo "7. Dropping disposable recovery database..."
+          psql -h "$DB_IP" -U carspective -d postgres -c "DROP DATABASE carspective_restore_target;"
+
+          echo "PostgreSQL live backup & isolated restore drill COMPLETED successfully."
+
+      # ========================================================================
+      # 11. DIAGNOSTIC COLLECTION ON FAILURE
+      # ========================================================================
+      - name: Collect Sanitized Diagnostics on Failure
+        if: failure()
+        run: |
+          DIAG_DIR="$STAGING_TMP_DIR/diagnostics"
+          mkdir -p "$DIAG_DIR"
+
+          echo "Collecting container states..."
+          docker ps -a > "$DIAG_DIR/docker_containers.txt" || true
+
+          echo "Collecting sanitized Compose logs (redacting secrets)..."
+          docker compose -f docker-compose.prod.yml --profile monitoring logs --tail 300 2>&1 | \
+            sed -E "s/($POSTGRES_PASSWORD|$SECRET_KEY|$ADMIN_API_KEY)/[REDACTED]/g" \
+            > "$DIAG_DIR/sanitized_compose_logs.txt" || true
+
+          echo "Collecting curl endpoint statuses..."
+          CACERT_PATH="$TLS_CERT_DIR/carspective.crt"
+          curl -s -S -I --cacert "$CACERT_PATH" https://localhost/health/liveness > "$DIAG_DIR/liveness_headers.txt" 2>&1 || true
+          curl -s -S --cacert "$CACERT_PATH" https://localhost/health/readiness > "$DIAG_DIR/readiness_body.txt" 2>&1 || true
+
+      - name: Upload Sanitized Diagnostic Artifacts
+        if: failure()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: staging-validation-diagnostics
+          path: ${{ env.STAGING_TMP_DIR }}/diagnostics/
+          retention-days: ${{ github.event.inputs.retention_days || 3 }}
+          if-no-files-found: ignore
+
+      # ========================================================================
+      # 12. CLEAN TEARDOWN & WIPEOUT
+      # ========================================================================
+      - name: Teardown & Environment Cleanup
+        if: always()
+        run: |
+          echo "Stopping and removing all staging Compose containers and volumes..."
+          docker compose -f docker-compose.prod.yml --profile monitoring down -v --remove-orphans || true
+
+          if [ -n "$STAGING_TMP_DIR" ] && [ -d "$STAGING_TMP_DIR" ]; then
+            echo "Wiping temporary staging directory..."
+            rm -rf "$STAGING_TMP_DIR"
+          fi
+
+          echo "Staging environment cleanup completed."
