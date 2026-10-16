@@ -1,0 +1,129 @@
+# ==============================================================================
+# CARspective — Multi-Container Production Compose Stack
+# Phase 21D: High-Performance Hardened Production Deployment
+# Services:
+#   1. db: PostgreSQL 16 Alpine Relational Database
+#   2. migrator: Ephemeral Alembic Schema Migration Runner
+#   3. api: Hardened Python WSGI Runtime (Gunicorn 4w x 2t gthread)
+#   4. gateway: NGINX Edge Reverse Proxy (Keepalive pool, Rate limiting, Static files)
+# ==============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: carspective-prod-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: carspective_prod
+      POSTGRES_USER: ${POSTGRES_USER:-carspective}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD environment variable must be set in production}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carspective} -d carspective_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - carspective_internal
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carspective-prod-migrator
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      CARSPECTIVE_ENV: production
+      CARSPECTIVE_DEBUG: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-carspective}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/carspective_prod
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY environment variable must be set in production}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:?ADMIN_API_KEY environment variable must be set in production}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - carspective_internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: carspective-api:prod
+    container_name: carspective-prod-api
+    restart: unless-stopped
+    expose:
+      - "5001"
+    environment:
+      CARSPECTIVE_ENV: production
+      CARSPECTIVE_DEBUG: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-carspective}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/carspective_prod
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY environment variable must be set in production}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:?ADMIN_API_KEY environment variable must be set in production}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,gateway,api,carspective.internal}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1}
+      TRUSTED_PROXIES: 1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health/liveness')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    networks:
+      - carspective_internal
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    image: carspective-gateway:prod
+    container_name: carspective-prod-gateway
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ${TLS_CERT_DIR:?TLS_CERT_DIR environment variable must point to directory containing carspective.crt and carspective.key}:/etc/nginx/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - carspective_internal
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: carspective-prod-prometheus
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ${PROMETHEUS_ADMIN_KEY_FILE:?PROMETHEUS_ADMIN_KEY_FILE must point to admin api key secret file}:/etc/prometheus/secrets/admin_api_key:ro
+      - prom_data:/prometheus
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - carspective_internal
+
+networks:
+  carspective_internal:
+    driver: bridge
+
+volumes:
+  pg_data:
+    driver: local
+  prom_data:
+    driver: local

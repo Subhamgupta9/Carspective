@@ -1,0 +1,26 @@
+# ==============================================================================
+# CARspective — Prometheus Scraper Configuration
+# Phase 21D: Production Metrics & Telemetry Ingestion
+# ==============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  - job_name: "carspective-api"
+    metrics_path: "/metrics"
+    params:
+      format: ["prometheus"]
+    # In production, /metrics requires administrative authorization
+    # Standard Prometheus reads bearer token from mounted secret file
+    bearer_token_file: "/etc/prometheus/secrets/admin_api_key"
+    static_configs:
+      - targets: ["api:5001"]
+        labels:
+          environment: "production"
+          service: "carspective-api"

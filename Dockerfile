@@ -65,8 +65,12 @@ COPY data/taxonomy_seeds/ ./data/taxonomy_seeds/
 # Copy compiled frontend distribution from Stage 1
 COPY --from=frontend-builder /app/client/dist ./client/dist
 
-# Create persistent database directory and assign non-root ownership
-RUN mkdir -p /app/data/database && \
+# Copy container entrypoint script
+COPY docker-entrypoint.sh ./
+
+# Create persistent database directory, set entrypoint permissions, and assign non-root ownership
+RUN chmod +x docker-entrypoint.sh && \
+    mkdir -p /app/data/database && \
     chown -R carspective:carspective /app
 
 # Switch to non-root runtime user
@@ -79,5 +83,6 @@ EXPOSE 5001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "import urllib.request, os; sys_port = os.environ.get('PORT', '5001'); urllib.request.urlopen(f'http://127.0.0.1:{sys_port}/health/liveness')"
 
-# Production WSGI server startup command
+# Container entrypoint and production WSGI server startup command
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "--threads", "2", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "server.wsgi:app"]

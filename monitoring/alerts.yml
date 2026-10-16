@@ -1,0 +1,58 @@
+# ==============================================================================
+# CARspective — Prometheus Production Alerting Rules
+# Phase 21D: Actionable Production Service Alerts
+# All metric expressions strictly match server/infrastructure/observability/metrics.py
+# ==============================================================================
+
+groups:
+  - name: carspective_production_alerts
+    rules:
+      - alert: CarSpectiveServiceDown
+        expr: up{job="carspective-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          tier: application
+        annotations:
+          summary: "CarSpective API instance is unreachable"
+          description: "Prometheus cannot scrape CarSpective API on instance {{ $labels.instance }}. Service may be crashed or restarting."
+
+      - alert: CarSpectiveDatabaseFailuresSpike
+        expr: sum(rate(carspective_database_failures_total[2m])) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          tier: database
+        annotations:
+          summary: "Database query or connection failures detected"
+          description: "Database failure rate is {{ $value }} failures/second over the last 2 minutes."
+
+      - alert: CarSpectiveHigh5xxErrorRate
+        expr: sum(rate(carspective_http_5xx_total[3m])) / clamp_min(sum(rate(carspective_http_requests_total[3m])), 0.001) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          tier: application
+        annotations:
+          summary: "CarSpective 5xx error rate exceeds 1% error budget"
+          description: "HTTP 5xx error rate is {{ $value | humanizePercentage }} over the last 3 minutes."
+
+      - alert: CarSpectiveHighLatency
+        expr: histogram_quantile(0.95, sum(rate(carspective_http_request_duration_seconds_bucket[5m])) by (le)) > 0.150
+        for: 3m
+        labels:
+          severity: warning
+          tier: performance
+        annotations:
+          summary: "Global P95 latency exceeds 150ms performance gate"
+          description: "Application P95 latency is {{ $value | humanizeDuration }} over 5m (threshold: 150ms)."
+
+      - alert: CarSpectiveClientErrorSpike
+        expr: sum(rate(carspective_http_requests_partitioned{status_class="4xx"}[3m])) > 10
+        for: 2m
+        labels:
+          severity: warning
+          tier: ingress
+        annotations:
+          summary: "High volume of client 4xx rejections (authentication/validation/rate-limits)"
+          description: "API is emitting elevated 4xx responses (rate: {{ $value }}/s)."

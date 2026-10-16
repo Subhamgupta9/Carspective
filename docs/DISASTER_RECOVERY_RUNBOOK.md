@@ -149,54 +149,50 @@ When CarSpective runs with SQLite in Write-Ahead Log (`WAL`) mode:
 
 ---
 
-## 6. POSTGRESQL BACKUP & RESTORE PROCEDURES (DOCUMENTATION ONLY)
+## 6. POSTGRESQL AUTOMATED BACKUP & RESTORE PROCEDURES
 
-> [!NOTE]
-> **Implementation Scope & Status:**  
-> PostgreSQL backup and recovery is a **DOCUMENTED OPERATIONAL PROCEDURE ONLY**. It is **not** implemented as an automated Python CLI tool in `scripts/`, nor has it been executed or tested against a running PostgreSQL daemon in the local environment (which strictly runs SQLite single-file storage).
+CarSpective provides automated, consistent PostgreSQL backup and recovery CLI utilities (`scripts/backup_postgresql.py` and `scripts/restore_postgresql.py`) engineered with companion cryptographic manifests, valuation model invariant checks, and safety guards.
 
-### A. Prerequisites for PostgreSQL Operations
-1. **Tooling:** Native PostgreSQL client binaries (`pg_dump`, `pg_restore`, `psql`) matching the server major version must be installed on the host or inside the administration container.
-2. **Network & Access:** TCP connectivity to the database host (default port 5432) with a valid `DATABASE_URL` connection string.
-3. **Database Privileges:** The database user must possess `SELECT` on all tables, sequences, and schemas for backup, and `CREATE`, `DROP`, `ALTER` for restore.
-
-### B. Logical Backup (`pg_dump`)
+### A. Automated Online Backup Execution
 ```bash
-# Export consistent compressed archive with custom format
-pg_dump \
-  --dbname="${DATABASE_URL}" \
-  --format=custom \
-  --compress=9 \
-  --file="backups/carspective_pg_backup_$(date +%Y%m%d_%H%M%S).dump"
+# Execute consistent logical backup with companion SHA-256 manifest
+python scripts/backup_postgresql.py \
+  --db-url "${DATABASE_URL}" \
+  --output-dir backups \
+  --retention-count 7
 ```
 
-### C. Point-in-Time Recovery / Full Restore (`pg_restore`)
+### B. What the PostgreSQL Backup Utility Does
+1. **Model Invariant Verification:** Verifies `models/carspective_valuation_lgbm_v1.joblib` SHA-256 (`4a4ccf3f...`) before proceeding.
+2. **Schema & Table Inventory:** Queries PostgreSQL metadata to record row counts across all tables and records the active Alembic revision (`f3d730c46a23`).
+3. **Atomic Compressed Snapshot:** Executes `pg_dump --format=custom --compress=9 --no-owner --no-privileges` into an isolated staging file.
+4. **Companion Cryptographic Manifest:** Generates `<backup_file>.manifest.json` recording SHA-256, file size, server version, table counts, and timestamp.
+5. **Deterministic Retention Pruning:** Retains the newest $N$ backups while strictly protecting safety baselines and the single newest valid backup.
+
+### C. Verifying a Candidate PostgreSQL Backup
 ```bash
-# 1. Terminate active backend connections to release locks
-psql "${DATABASE_URL}" -c "
-  SELECT pg_terminate_backend(pid) 
-  FROM pg_stat_activity 
-  WHERE datname = current_database() AND pid <> pg_backend_pid();
-"
-
-# 2. Restore schema and data cleanly
-pg_restore \
-  --dbname="${DATABASE_URL}" \
-  --clean \
-  --if-exists \
-  --no-owner \
-  --no-privileges \
-  "backups/carspective_pg_backup_<timestamp>.dump"
-
-# 3. Verify Alembic migration head
-python -m alembic current
-# Expected output: f3d730c46a23 (head)
+python scripts/backup_postgresql.py --verify backups/carspective_pg_backup_<timestamp>.dump --json
 ```
 
-### D. Known Failure Conditions & Remediation
-- **Connection Lockout (`cannot drop table while referenced by other connections`):** Occurs if web workers are active. Remediate by draining/stopping web containers before restore and terminating backends.
-- **Client/Server Version Incompatibility (`pg_dump: server version: 16.x; pg_dump version: 15.x`):** `pg_dump` version must be greater than or equal to the target PostgreSQL server version.
-- **Ownership / Permission Errors (`must be owner of relation`):** Restoring with `--no-owner` and `--no-privileges` prevents failures when restoring into databases where roles differ from the original database.
+### D. Safe Restoration Procedure
+Before restoring, always perform a non-destructive dry-run:
+```bash
+# 1. Non-destructive dry-run inspection
+python scripts/restore_postgresql.py \
+  --backup-path backups/carspective_pg_backup_<timestamp>.dump \
+  --verify-only
+
+# 2. Verified restoration into live target database
+python scripts/restore_postgresql.py \
+  --backup-path backups/carspective_pg_backup_<timestamp>.dump \
+  --db-url "${DATABASE_URL}" \
+  --confirm-overwrite-live
+```
+
+*Restoration Safety Guarantees:*
+- **Pre-Restore Safety Snapshot:** Automatically takes a safety dump of the active database before any changes are applied.
+- **Connection Termination:** Executes `pg_terminate_backend(pid)` to cleanly release locks held by web workers.
+- **Post-Restoration Verification:** Verifies table counts and Alembic version against the manifest before releasing success status.
 
 ## 7. VALUATION MODEL ARTIFACT RECOVERY
 
@@ -267,3 +263,25 @@ The primary valuation engine relies on `models/carspective_valuation_lgbm_v1.job
   2. **Level 2 (Triage):** On-call engineer inspects logs (`docker logs --tail 200 carspective-prod`).
   3. **Level 3 (Mitigation):** Initiate Disaster Recovery SOP section corresponding to incident category.
   4. **Level 4 (Post-Mortem):** Verify post-restore table counts, verify Alembic revision `f3d730c46a23`, and archive incident report.
+
+---
+
+## 10. PRODUCTION INGRESS & TLS CERTIFICATE REQUIREMENTS
+
+The production edge gateway (`docker/nginx/`) terminates TLS on port 443 and enforces strict fail-closed security invariants:
+
+### A. Explicit Mount Requirement
+Authoritative, CA-signed TLS certificates must be provided in the host directory pointed to by the `TLS_CERT_DIR` environment variable (e.g., `./certs/`).
+
+### B. Expected File Naming
+- **Certificate Chain:** `/etc/nginx/certs/carspective.crt`
+- **Private Key:** `/etc/nginx/certs/carspective.key`
+
+### C. Fail-Closed Security Guarantees
+- **No Baked-in Certificates:** The production container image contains **no self-signed certificates or private keys**.
+- **Compose Fail-Fast:** If `TLS_CERT_DIR` is not set, `docker-compose.prod.yml` immediately aborts (`${TLS_CERT_DIR:?Error}`).
+- **NGINX Refusal on Missing Certs:** If `carspective.crt` or `carspective.key` is missing or invalid, NGINX syntax validation fails and the gateway refuses to start, completely preventing accidental serving of insecure or unverified TLS connections.
+
+### D. Prometheus Telemetry Scraper Authentication
+- Prometheus scrapes `/metrics` using `bearer_token_file: "/etc/prometheus/secrets/admin_api_key"`.
+- When deploying the monitoring profile (`docker compose --profile monitoring up`), `PROMETHEUS_ADMIN_KEY_FILE` must point to a host file containing the `ADMIN_API_KEY`, mounted read-only (`:ro`).
