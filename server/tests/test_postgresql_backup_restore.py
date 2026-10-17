@@ -9,6 +9,7 @@ All tests run with isolated temporary directories or mocked subprocesses.
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -378,3 +379,91 @@ def test_terminate_backend_connections_passes_psycopg2_url_to_sqlalchemy():
         mock_create_engine.assert_called_once()
         called_url = mock_create_engine.call_args[0][0]
         assert called_url == "postgresql+psycopg2://usr:secret@localhost:5432/carspective_prod"
+
+
+# ==============================================================================
+# 6. DIRECT SCRIPT INVOCATION & IMPORT RESILIENCE
+# ==============================================================================
+
+def test_restore_script_cli_help_execution_without_pythonpath():
+    """
+    Confirms scripts/restore_postgresql.py can be invoked directly via CLI
+    without requiring PYTHONPATH to be configured by the caller.
+    """
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+
+    proc = subprocess.run(
+        [sys.executable, "scripts/restore_postgresql.py", "--help"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    assert proc.returncode == 0
+    assert "CarSpective PostgreSQL Restore & Recovery Utility" in proc.stdout
+    assert "ModuleNotFoundError" not in proc.stderr
+
+
+def test_restore_script_cli_verify_without_pythonpath(tmp_path: Path):
+    """
+    Confirms scripts/restore_postgresql.py fails safely on missing backup
+    via structured JSON without failing on 'scripts' module import.
+    """
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    dummy_dump = tmp_path / "nonexistent.dump"
+
+    proc = subprocess.run(
+        [sys.executable, "scripts/restore_postgresql.py", "--backup-path", str(dummy_dump), "--verify-only", "--json"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    assert proc.returncode != 0
+    payload = json.loads(proc.stdout)
+    assert payload.get("success") is False
+    assert "nonexistent.dump" in payload.get("error", "")
+    assert "ModuleNotFoundError" not in proc.stderr
+
+
+def test_restore_script_sys_path_bootstrapping():
+    """
+    Validates that restore_postgresql bootstraps the project root into sys.path
+    and resolves execute_pg_dump and sanitize_db_url_for_cli.
+    """
+    import scripts.restore_postgresql as restore_mod
+
+    assert hasattr(restore_mod, "execute_pg_dump")
+    assert hasattr(restore_mod, "sanitize_db_url_for_cli")
+    assert callable(restore_mod.execute_pg_dump)
+    assert callable(restore_mod.sanitize_db_url_for_cli)
+
+
+def test_restore_script_isolated_subprocess_execution():
+    """
+    Spawns an isolated Python process where repo root is excluded from sys.path
+    and only scripts directory is at sys.path[0], verifying that restore_postgresql
+    self-bootstraps sys.path and imports successfully without ModuleNotFoundError.
+    """
+    code = (
+        "import sys, pathlib; "
+        "repo_root = str(pathlib.Path('.').resolve()); "
+        "scripts_dir = str(pathlib.Path('scripts').resolve()); "
+        "sys.path = [p for p in sys.path if p != repo_root]; "
+        "sys.path.insert(0, scripts_dir); "
+        "import restore_postgresql; "
+        "assert hasattr(restore_postgresql, 'execute_pg_dump'); "
+        "assert hasattr(restore_postgresql, 'sanitize_db_url_for_cli'); "
+        "print('ISOLATED_IMPORT_SUCCESS')"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert proc.returncode == 0
+    assert "ISOLATED_IMPORT_SUCCESS" in proc.stdout
+    assert "ModuleNotFoundError" not in proc.stderr

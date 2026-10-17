@@ -31,6 +31,19 @@ import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# Ensure project root is on sys.path for direct CLI script execution
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+try:
+    from scripts.backup_postgresql import execute_pg_dump, sanitize_db_url_for_cli
+except ModuleNotFoundError as _import_err:
+    if _import_err.name in ("scripts", "scripts.backup_postgresql"):
+        from backup_postgresql import execute_pg_dump, sanitize_db_url_for_cli
+    else:
+        raise
+
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
@@ -319,7 +332,6 @@ def execute_pg_restore(
     --clean --if-exists --exit-on-error --no-owner --no-privileges
     Passes credentials via PGPASSWORD environment variable to prevent process list leakage.
     """
-    from scripts.backup_postgresql import sanitize_db_url_for_cli
     normalized_for_cli = normalize_pg_url(db_url)
     sanitized_url, password = sanitize_db_url_for_cli(normalized_for_cli)
 
@@ -372,7 +384,6 @@ def create_safety_backup(
 
     logger.info(f"Creating pre-restore safety backup: {safety_name}...")
     try:
-        from scripts.backup_postgresql import execute_pg_dump
         norm_url = normalize_pg_url(db_url)
         execute_pg_dump(norm_url, safety_path, pg_dump_bin=pg_dump_bin)
         if not safety_path.is_file() or safety_path.stat().st_size == 0:
