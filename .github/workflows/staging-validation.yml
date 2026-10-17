@@ -390,8 +390,8 @@ jobs:
           try:
               with engine.connect() as conn:
                   conn.execute(sa.text('''
-                      INSERT INTO manufacturers (id, name, slug, country_of_origin)
-                      VALUES ('mfg-synthetic-staging-audit', 'Synthetic Staging Motors', 'synthetic-staging-motors', 'Staging')
+                      INSERT INTO manufacturers (id, name, slug, country_of_origin, is_active, created_at, updated_at)
+                      VALUES ('mfg-synthetic-staging-audit', 'Synthetic Staging Motors', 'synthetic-staging-motors', 'Staging', TRUE, NOW(), NOW())
                       ON CONFLICT (id) DO NOTHING;
                   '''))
                   conn.commit()
