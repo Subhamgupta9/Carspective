@@ -157,12 +157,36 @@ def verify_model_artifact(
 
 
 def normalize_pg_url(url: str) -> str:
-    """Normalizes database URL for PostgreSQL operations."""
+    """
+    Normalizes database URL for PostgreSQL client operations (pg_dump, pg_restore, libpq).
+    Ensures URL uses the standard 'postgresql://' scheme recognized by libpq.
+    Strips Python-specific DBAPI dialect specifiers (e.g. +psycopg2) if present.
+    """
     if not url:
         return ""
-    if url.startswith("postgres://"):
-        return "postgresql://" + url[len("postgres://"):]
-    return url
+    trimmed = str(url).strip()
+    if trimmed.startswith("postgresql+psycopg2://"):
+        return f"postgresql://{trimmed[len('postgresql+psycopg2://'):]}"
+    if trimmed.startswith("postgres://"):
+        return f"postgresql://{trimmed[len('postgres://'):]}"
+    return trimmed
+
+
+def to_sqlalchemy_url(url: str) -> str:
+    """
+    Normalizes a database URL specifically for SQLAlchemy engine creation.
+    In SQLAlchemy 2.1+, generic 'postgresql://' defaults to the 'psycopg' (v3) driver.
+    Because CarSpective standardizes on psycopg2 ('psycopg2-binary'), normalize
+    generic 'postgresql://' and 'postgres://' to 'postgresql+psycopg2://'.
+    """
+    if not url:
+        return ""
+    trimmed = str(url).strip()
+    if trimmed.startswith("postgresql://"):
+        return f"postgresql+psycopg2://{trimmed[len('postgresql://'):]}"
+    if trimmed.startswith("postgres://"):
+        return f"postgresql+psycopg2://{trimmed[len('postgres://'):]}"
+    return trimmed
 
 
 def mask_db_url(url: str) -> str:
@@ -212,7 +236,8 @@ def inspect_postgresql_database(db_url: str) -> Dict[str, Any]:
     """
     import sqlalchemy as sa
 
-    engine = sa.create_engine(db_url, pool_pre_ping=True)
+    sa_url = to_sqlalchemy_url(db_url)
+    engine = sa.create_engine(sa_url, pool_pre_ping=True)
     table_counts: Dict[str, int] = {}
     alembic_version: Optional[str] = None
     server_version: str = "unknown"
@@ -385,7 +410,8 @@ def execute_pg_dump(
     pg_dump_bin: str = "pg_dump",
 ) -> None:
     """Executes pg_dump binary to create a custom compressed archive."""
-    sanitized_url, password = sanitize_db_url_for_cli(db_url)
+    normalized_for_cli = normalize_pg_url(db_url)
+    sanitized_url, password = sanitize_db_url_for_cli(normalized_for_cli)
     cmd = [
         pg_dump_bin,
         f"--dbname={sanitized_url}",

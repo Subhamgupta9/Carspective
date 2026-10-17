@@ -21,15 +21,22 @@ from scripts.backup_postgresql import (
     create_postgresql_backup,
     execute_pg_dump,
     find_manifest_for_backup,
+    inspect_postgresql_database as backup_inspect_postgresql_database,
     is_protected_path,
+    normalize_pg_url as backup_normalize_pg_url,
     prune_retention,
+    to_sqlalchemy_url as backup_to_sqlalchemy_url,
     verify_model_artifact,
     verify_postgresql_backup,
 )
 from scripts.restore_postgresql import (
     PostgreSQLRestoreError,
     execute_pg_restore,
+    inspect_postgresql_database as restore_inspect_postgresql_database,
+    normalize_pg_url as restore_normalize_pg_url,
     restore_postgresql_backup,
+    terminate_backend_connections,
+    to_sqlalchemy_url as restore_to_sqlalchemy_url,
     verify_backup_candidate,
 )
 
@@ -259,3 +266,115 @@ def test_restore_fails_closed_when_safety_backup_fails(tmp_path: Path):
                 db_url="postgresql://user:pass@localhost:5432/carspective_prod",
                 confirm_overwrite_live=True,
             )
+
+
+# ==============================================================================
+# 6. DRIVER SELECTION & URL NORMALIZATION FOR CONSUMERS
+# ==============================================================================
+
+@pytest.mark.parametrize("norm_func", [backup_normalize_pg_url, restore_normalize_pg_url])
+def test_normalize_pg_url_variants(norm_func):
+    """
+    Validates that normalize_pg_url yields clean libpq-compatible 'postgresql://' URLs
+    and strips Python DBAPI specifiers like '+psycopg2'.
+    """
+    assert norm_func("postgresql://usr:secret@localhost:5432/carspective") == "postgresql://usr:secret@localhost:5432/carspective"
+    assert norm_func("postgres://usr:secret@localhost:5432/carspective") == "postgresql://usr:secret@localhost:5432/carspective"
+    assert norm_func("postgresql+psycopg2://usr:secret@localhost:5432/carspective") == "postgresql://usr:secret@localhost:5432/carspective"
+    assert norm_func("") == ""
+    assert norm_func(None) == ""
+    assert norm_func("   ") == ""
+
+
+@pytest.mark.parametrize("to_sa_func", [backup_to_sqlalchemy_url, restore_to_sqlalchemy_url])
+def test_to_sqlalchemy_url_variants(to_sa_func):
+    """
+    Validates that to_sqlalchemy_url normalizes generic PostgreSQL URLs to
+    explicitly select the 'psycopg2' DBAPI driver ('postgresql+psycopg2://').
+    """
+    assert to_sa_func("postgresql://usr:secret@localhost:5432/carspective") == "postgresql+psycopg2://usr:secret@localhost:5432/carspective"
+    assert to_sa_func("postgres://usr:secret@localhost:5432/carspective") == "postgresql+psycopg2://usr:secret@localhost:5432/carspective"
+    assert to_sa_func("postgresql+psycopg2://usr:secret@localhost:5432/carspective") == "postgresql+psycopg2://usr:secret@localhost:5432/carspective"
+    assert to_sa_func("sqlite:///:memory:") == "sqlite:///:memory:"
+    assert to_sa_func("") == ""
+    assert to_sa_func(None) == ""
+    assert to_sa_func("   ") == ""
+
+
+def test_execute_pg_dump_normalizes_psycopg2_input_for_libpq(tmp_path: Path):
+    """
+    Confirms that execute_pg_dump normalizes a 'postgresql+psycopg2://' connection string
+    down to standard 'postgresql://' before invoking the libpq pg_dump subprocess.
+    """
+    out_file = tmp_path / "test_norm.dump"
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+        execute_pg_dump("postgresql+psycopg2://user:secret_password@localhost:5432/db", out_file, pg_dump_bin="pg_dump")
+
+        mock_run.assert_called_once()
+        cmd = mock_run.call_args[0][0]
+        # Invariant: libpq command must NOT contain '+psycopg2'
+        assert "+psycopg2" not in str(cmd)
+        assert "--dbname=postgresql://user@localhost:5432/db" in cmd
+        assert mock_run.call_args[1].get("env", {}).get("PGPASSWORD") == "secret_password"
+
+
+def test_execute_pg_restore_normalizes_psycopg2_input_for_libpq(tmp_path: Path):
+    """
+    Confirms that execute_pg_restore normalizes a 'postgresql+psycopg2://' connection string
+    down to standard 'postgresql://' before invoking the libpq pg_restore subprocess.
+    """
+    dump_file = tmp_path / "test_norm.dump"
+    dump_file.write_bytes(b"data")
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+        execute_pg_restore("postgresql+psycopg2://user:secret_password@localhost:5432/db", dump_file, pg_restore_bin="pg_restore")
+
+        mock_run.assert_called_once()
+        cmd = mock_run.call_args[0][0]
+        # Invariant: libpq command must NOT contain '+psycopg2'
+        assert "+psycopg2" not in str(cmd)
+        assert "--dbname=postgresql://user@localhost:5432/db" in cmd
+        assert mock_run.call_args[1].get("env", {}).get("PGPASSWORD") == "secret_password"
+
+
+@pytest.mark.parametrize("inspect_fn", [backup_inspect_postgresql_database, restore_inspect_postgresql_database])
+def test_inspect_database_passes_psycopg2_url_to_sqlalchemy(inspect_fn):
+    """
+    Confirms that inspect_postgresql_database in both backup and restore scripts
+    converts raw 'postgresql://' into 'postgresql+psycopg2://' when calling sa.create_engine.
+    """
+    with patch("sqlalchemy.create_engine") as mock_create_engine:
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = ("PostgreSQL 16.0", "carspective_prod")
+        mock_engine = MagicMock()
+        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_create_engine.return_value = mock_engine
+
+        with patch("sqlalchemy.inspect") as mock_inspect:
+            mock_inspect.return_value.get_table_names.return_value = []
+            inspect_fn("postgresql://usr:secret@localhost:5432/carspective_prod")
+
+            mock_create_engine.assert_called_once()
+            called_url = mock_create_engine.call_args[0][0]
+            assert called_url == "postgresql+psycopg2://usr:secret@localhost:5432/carspective_prod"
+
+
+def test_terminate_backend_connections_passes_psycopg2_url_to_sqlalchemy():
+    """
+    Confirms that terminate_backend_connections converts raw 'postgresql://'
+    into 'postgresql+psycopg2://' when calling sa.create_engine.
+    """
+    with patch("sqlalchemy.create_engine") as mock_create_engine:
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = (2,)
+        mock_engine = MagicMock()
+        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_create_engine.return_value = mock_engine
+
+        terminated = terminate_backend_connections("postgresql://usr:secret@localhost:5432/carspective_prod")
+        assert terminated == 2
+
+        mock_create_engine.assert_called_once()
+        called_url = mock_create_engine.call_args[0][0]
+        assert called_url == "postgresql+psycopg2://usr:secret@localhost:5432/carspective_prod"

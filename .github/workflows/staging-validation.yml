@@ -383,8 +383,9 @@ jobs:
           python -c "
           import os
           import sqlalchemy as sa
+          from server.config.settings import normalize_database_url
 
-          db_url = os.environ['STAGING_PG_URL']
+          db_url = normalize_database_url(os.environ['STAGING_PG_URL'])
           engine = sa.create_engine(db_url)
           try:
               with engine.connect() as conn:
@@ -430,8 +431,9 @@ jobs:
           python -c "
           import os
           import sqlalchemy as sa
+          from server.config.settings import normalize_database_url
 
-          db_url = os.environ['RESTORE_TARGET_URL']
+          db_url = normalize_database_url(os.environ['RESTORE_TARGET_URL'])
           engine = sa.create_engine(db_url)
           try:
               with engine.connect() as conn:
