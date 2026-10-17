@@ -187,17 +187,75 @@ jobs:
           echo "Auditing host-published container ports..."
           docker ps --format 'table {{.Names}}\t{{.Ports}}\t{{.Status}}'
 
-          PORT_MAPS=$(docker ps --format '{{.Names}}: {{.Ports}}')
+          python -c "
+          import json, sys, subprocess
 
-          # Fail closed if internal API (5001) or Database (5432) or Prometheus (9090) are published to host
-          if echo "$PORT_MAPS" | grep -v "carspective-prod-gateway" | grep -E "5001|5432|9090"; then
-            echo "CRITICAL SECURITY VIOLATION: Internal microservice ports are exposed to host!"
-            exit 1
-          fi
+          containers = ['carspective-prod-gateway', 'carspective-prod-api', 'carspective-prod-db', 'carspective-prod-prometheus']
+          cmd = ['docker', 'inspect'] + containers
+          p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+          if p.returncode != 0:
+              print(f'ERROR: docker inspect failed: {p.stderr.strip()}', file=sys.stderr)
+              sys.exit(1)
 
-          # Confirm gateway publishes 80 and 443
-          echo "$PORT_MAPS" | grep "carspective-prod-gateway" | grep -E "80->80|443->443"
-          echo "Network isolation & ingress port binding VERIFIED."
+          try:
+              data = json.loads(p.stdout)
+          except Exception as e:
+              print(f'ERROR: Failed to parse docker inspect output: {e}', file=sys.stderr)
+              sys.exit(1)
+
+          if not data or not isinstance(data, list):
+              print('ERROR: docker inspect returned empty or non-list data', file=sys.stderr)
+              sys.exit(1)
+
+          expected_gateway_mappings = {('80', '80/tcp'), ('443', '443/tcp')}
+          gateway_mappings = set()
+          violations = []
+          inspected_names = set()
+
+          for c in data:
+              name = c.get('Name', '').lstrip('/')
+              inspected_names.add(name)
+              ports = c.get('NetworkSettings', {}).get('Ports') or {}
+              host_bindings = []
+              for c_port, bindings in ports.items():
+                  if bindings:
+                      for b in bindings:
+                          host_bindings.append({
+                              'container_port': str(c_port).strip(),
+                              'host_ip': str(b.get('HostIp', '')).strip(),
+                              'host_port': str(b.get('HostPort', '')).strip()
+                          })
+
+              if name == 'carspective-prod-gateway':
+                  for b in host_bindings:
+                      h_p = b['host_port']
+                      c_p = b['container_port']
+                      mapping = (h_p, c_p)
+                      gateway_mappings.add(mapping)
+                      if mapping not in expected_gateway_mappings:
+                          violations.append(f'Gateway has unauthorized or unexpected port mapping (host {h_p} -> {c_p}): {b}')
+              else:
+                  if host_bindings:
+                      violations.append(f'Internal container \'{name}\' has published host ports: {host_bindings}')
+
+          missing = set(containers) - inspected_names
+          if missing:
+              print(f'ERROR: Missing expected containers: {missing}', file=sys.stderr)
+              sys.exit(1)
+
+          if violations:
+              print('CRITICAL SECURITY VIOLATION: Forbidden port exposure or unauthorized mapping detected:', file=sys.stderr)
+              for v in violations:
+                  print(f'  - {v}', file=sys.stderr)
+              sys.exit(1)
+
+          missing_gateway = expected_gateway_mappings - gateway_mappings
+          if missing_gateway:
+              print(f'ERROR: Gateway missing required host-to-container mappings: {missing_gateway}. Found: {gateway_mappings}', file=sys.stderr)
+              sys.exit(1)
+
+          print(f'Network isolation & ingress port binding VERIFIED. Gateway published mappings: {sorted(gateway_mappings)}')
+          "
 
       # ========================================================================
       # 7. LIVE INGRESS, TLS & SECURITY HEADER AUDIT
