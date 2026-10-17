@@ -5,6 +5,7 @@ credential redaction, retention synchronization, and disaster recovery retrieval
 All tests run with isolated temporary directories and mocked cloud interactions.
 """
 
+import ctypes
 import json
 import logging
 import os
@@ -643,11 +644,14 @@ def test_process_lock_stale_pid_recovery_windows(tmp_path: Path):
     with open(lock_file, "w", encoding="utf-8") as f:
         json.dump({"pid": 88888888, "timestamp_utc": "2026-10-17T00:00:00Z"}, f)
 
+    mock_windll = MagicMock()
     mock_kernel32 = MagicMock()
+    mock_windll.kernel32 = mock_kernel32
+
     mock_kernel32.OpenProcess.return_value = 0
     mock_kernel32.GetLastError.return_value = 87
 
-    with patch("sys.platform", "win32"), patch("ctypes.windll.kernel32", mock_kernel32):
+    with patch("sys.platform", "win32"), patch.object(ctypes, "windll", mock_windll, create=True):
         lock = ProcessLock(lock_file)
         assert lock._is_stale() is True
 
@@ -655,9 +659,17 @@ def test_process_lock_stale_pid_recovery_windows(tmp_path: Path):
     mock_kernel32.OpenProcess.return_value = 0
     mock_kernel32.GetLastError.return_value = 5
 
-    with patch("sys.platform", "win32"), patch("ctypes.windll.kernel32", mock_kernel32):
+    with patch("sys.platform", "win32"), patch.object(ctypes, "windll", mock_windll, create=True):
         lock = ProcessLock(lock_file)
         assert lock._is_stale() is False
+
+    # Case 3: Live process -> OpenProcess returns valid handle (e.g. 1234)
+    mock_kernel32.OpenProcess.return_value = 1234
+
+    with patch("sys.platform", "win32"), patch.object(ctypes, "windll", mock_windll, create=True):
+        lock = ProcessLock(lock_file)
+        assert lock._is_stale() is False
+        mock_kernel32.CloseHandle.assert_called_with(1234)
 
 
 def test_orchestrate_backup_skip_on_lock_contention(tmp_staging: Path, dummy_backup_files):
