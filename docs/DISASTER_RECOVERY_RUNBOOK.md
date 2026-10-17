@@ -194,7 +194,182 @@ python scripts/restore_postgresql.py \
 - **Connection Termination:** Executes `pg_terminate_backend(pid)` to cleanly release locks held by web workers.
 - **Post-Restoration Verification:** Verifies table counts and Alembic version against the manifest before releasing success status.
 
-## 7. VALUATION MODEL ARTIFACT RECOVERY
+---
+
+## 7. AUTOMATED BACKUP ORCHESTRATION & OFF-SITE S3 REPLICATION
+
+CarSpective Phase 23B provides a production-grade orchestration and off-site replication engine (`scripts/orchestrate_backup.py`). It coordinates consistent local PostgreSQL backups, enforces atomic concurrency locks to prevent race conditions during scheduled runs, and securely replicates backups to S3-compatible object storage with server-side encryption.
+
+### A. Core Architecture & Safety Invariants
+1. **Concurrency Lock (Process Lock):** Uses atomic file creation (`os.O_CREAT | os.O_EXCL`) with JSON PID tracking and stale-process verification (`ctypes.windll.kernel32.OpenProcess` on Windows, `os.kill(pid, 0)` with `ProcessLookupError` on POSIX). If another backup process is actively executing, the orchestrator detects the lock and cleanly skips execution with exit code 0 (`skipped: true`), preventing overlapping executions without triggering false scheduler alerts. To force a hard error on lock contention (e.g., for ad-hoc manual runs), pass `--fail-on-lock`.
+2. **Local Backup First:** Always generates and cryptographically verifies the local PostgreSQL dump and manifest via `scripts/backup_postgresql.py` before attempting cloud upload.
+3. **Fail-Closed Encryption & Verification:** Uploads with S3 Server-Side Encryption (`AES256` or `aws:kms`). Immediately issues a `head_object` check to confirm remote byte-size equality, presence, and encryption headers. If remote verification fails, local backups are preserved intact and the process exits with a non-zero exit code.
+4. **Never Delete Local Before Remote Confirmation:** Local retention pruning runs only after local creation succeeds; remote retention pruning runs independently only after remote upload and verification succeed.
+5. **Zero Cloud Dependencies on Core Startup:** The application does not require `boto3` to run or boot; `boto3` is dynamically imported only within the S3 replication workflow.
+6. **Credential Redaction:** The orchestrator enforces a `SensitiveFilter` on all logging streams (covering `msg`, format args, and mappings) and sanitizes JSON outputs, automatically masking database passwords, AWS access keys, and authorization tokens.
+
+### B. Scheduling Configurations
+
+#### 1. Host-Level Systemd Timer (Recommended for Production VMs)
+
+**Step 1: Secure Environment File Setup**
+Create `/etc/carspective/backup.env` with strict permissions (0600) so credentials cannot be read by unauthorized users:
+```bash
+sudo mkdir -p /etc/carspective
+sudo chmod 700 /etc/carspective
+# Create environment file
+sudo tee /etc/carspective/backup.env > /dev/null << 'EOF'
+DATABASE_URL=postgresql://carspective_user:password@localhost:5432/carspective
+BACKUP_S3_BUCKET=carspective-offsite-backups
+AWS_REGION=ap-south-1
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+EOF
+sudo chmod 600 /etc/carspective/backup.env
+sudo chown root:carspective /etc/carspective/backup.env
+
+# Prepare dedicated backup directory with restricted permissions:
+sudo mkdir -p /var/backups/carspective
+sudo chown carspective:carspective /var/backups/carspective
+sudo chmod 700 /var/backups/carspective
+```
+
+**Step 2: Service Unit Definition**
+Create `/etc/systemd/system/carspective-backup.service`:
+```ini
+[Unit]
+Description=CarSpective Automated PostgreSQL Backup and Off-Site Replication
+After=network.target docker.service
+
+[Service]
+Type=oneshot
+User=carspective
+WorkingDirectory=/opt/carspective
+EnvironmentFile=/etc/carspective/backup.env
+ExecStart=/opt/carspective/venv/bin/python scripts/orchestrate_backup.py \
+  --db-url "${DATABASE_URL}" \
+  --staging-dir /var/backups/carspective \
+  --storage-type s3 \
+  --s3-bucket "${BACKUP_S3_BUCKET}" \
+  --s3-prefix "production/postgres/" \
+  --s3-region "${AWS_REGION}" \
+  --sse-algorithm AES256 \
+  --retention-count 7 \
+  --remote-retention-count 14
+StandardOutput=journal
+StandardError=journal
+```
+
+**Step 3: Timer Unit Definition**
+Create `/etc/systemd/system/carspective-backup.timer`:
+```ini
+[Unit]
+Description=Run CarSpective Backup Daily at 02:00 UTC
+Requires=carspective-backup.service
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 UTC
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable and start the timer:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now carspective-backup.timer
+sudo systemctl list-timers carspective-backup.timer
+```
+
+#### 2. Container-Level Cron (Supercronic)
+For fully containerized deployments, define a dedicated backup service in `docker-compose.prod.yml`:
+```yaml
+  backup-cron:
+    image: carspective:latest
+    entrypoint: ["supercronic", "/etc/crontabs/backup-cron"]
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - BACKUP_S3_BUCKET=${BACKUP_S3_BUCKET}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+    volumes:
+      - backup_data:/var/backups/carspective
+    restart: unless-stopped
+```
+
+Crontab file (`/etc/crontabs/backup-cron`):
+```cron
+# Run daily automated backup and offsite S3 replication at 02:00 UTC
+0 2 * * * python /app/scripts/orchestrate_backup.py --db-url "$DATABASE_URL" --staging-dir /var/backups/carspective --storage-type s3 --s3-bucket "$BACKUP_S3_BUCKET" --sse-algorithm AES256 --retention-count 7 --remote-retention-count 14 >> /proc/1/fd/1 2>&1
+```
+
+### C. Off-Site S3 Replication & Environment Variables
+Required environment variables for off-site replication:
+- `DATABASE_URL`: PostgreSQL connection string (`postgresql://user:pass@host:5432/dbname`)
+- `BACKUP_S3_BUCKET`: Target S3 or S3-compatible bucket name
+- `AWS_REGION`: Target bucket region (e.g., `ap-south-1`, `us-east-1`)
+- `AWS_ACCESS_KEY_ID` & `AWS_SECRET_ACCESS_KEY`: IAM credentials with `s3:PutObject`, `s3:GetObject`, `s3:ListBucket`, `s3:DeleteObject`, and `s3:HeadObject` permissions restricted to the backup prefix.
+- `AWS_ENDPOINT_URL` (Optional): Custom endpoint for MinIO, Ceph, or Cloudflare R2.
+- `BACKUP_KMS_KEY_ID` (Optional): KMS Key ARN/ID if `--sse-algorithm aws:kms` is configured.
+
+### D. Disaster Recovery: Remote Backup Retrieval Workflow
+When recovering from catastrophic local storage loss or provisioning a new environment from off-site storage:
+
+1. **Verify Remote Backup Existence and Metadata:**
+   ```bash
+   python scripts/orchestrate_backup.py \
+     --storage-type s3 \
+     --s3-bucket "${BACKUP_S3_BUCKET}" \
+     --s3-region "${AWS_REGION:-ap-south-1}" \
+     --verify-remote "production/postgres/carspective_pg_backup_20261017_020000.dump"
+   ```
+
+2. **Retrieve Remote Backup and Companion Manifest:**
+   ```bash
+   python scripts/orchestrate_backup.py \
+     --storage-type s3 \
+     --s3-bucket "${BACKUP_S3_BUCKET}" \
+     --s3-region "${AWS_REGION:-ap-south-1}" \
+     --retrieve "production/postgres/carspective_pg_backup_20261017_020000.dump" \
+     --retrieve-dir /var/backups/recovered
+   ```
+   *The retrieval command automatically downloads both the `.dump` and `.manifest.json` files and verifies the local SHA-256 hash against the manifest. Pass `--overwrite` if target files already exist.*
+
+3. **Execute Isolated Target Restoration Drill:**
+   Always restore into an isolated drill database (e.g. `carspective_drill`) to verify integrity before touching production:
+   ```bash
+   # Create isolated test target
+   createdb -h localhost -U postgres carspective_drill
+
+   # Perform drill restore
+   python scripts/restore_postgresql.py \
+     --backup-path /var/backups/recovered/carspective_pg_backup_20261017_020000.dump \
+     --db-url "postgresql://postgres:postgres@localhost:5432/carspective_drill" \
+     --confirm-overwrite-live
+
+   # Drop drill database after inspection
+   dropdb -h localhost -U postgres carspective_drill
+   ```
+
+4. **Restore Live Production Database:**
+   Follow Section 6.D (`scripts/restore_postgresql.py --confirm-overwrite-live`).
+
+### E. Architectural Scope & Current Boundaries
+> [!NOTE]
+> **Snapshot Backups vs. Continuous Point-in-Time Recovery (PITR):**
+> `scripts/orchestrate_backup.py` orchestrates consistent, verified, encrypted **discrete logical snapshots** replicated to object storage.
+> It does not manage continuous WAL archiving or sub-minute Point-in-Time Recovery (PITR). For RPO $< 1$ minute in high-write enterprise setups, dedicated WAL archiving tools such as `pgBackRest` or `WAL-G` should be paired with continuous PostgreSQL WAL shipping.
+
+> [!NOTE]
+> **Object Lock & Immutability Scope:**
+> The orchestrator inspects `ObjectLockMode` and `ObjectLockRetainUntilDate` metadata returned by S3 `head_object` for diagnostic reporting. However, the orchestrator does NOT configure or guarantee bucket-level WORM immutability policies. True immutability must be configured on the AWS S3 bucket directly (via AWS console/CLI/Terraform Object Lock configuration with Compliance Mode) to prevent unauthorized deletion by root or IAM credentials.
+
+---
+
+## 8. VALUATION MODEL ARTIFACT RECOVERY
 
 The primary valuation engine relies on `models/carspective_valuation_lgbm_v1.joblib`. If the model is corrupted or deleted:
 1. The readiness probe (`GET /health/readiness`) immediately reports `503 Service Unavailable`:
@@ -226,7 +401,7 @@ The primary valuation engine relies on `models/carspective_valuation_lgbm_v1.job
 
 ---
 
-## 8. ROLLBACK DECISION MATRIX
+## 9. ROLLBACK DECISION MATRIX
 
 ```
                        INCIDENT DETECTED
@@ -255,7 +430,7 @@ The primary valuation engine relies on `models/carspective_valuation_lgbm_v1.job
 
 ---
 
-## 9. INCIDENT ESCALATION & CONTACTS
+## 10. INCIDENT ESCALATION & CONTACTS
 
 - **Incident Commander:** Platform Lead
 - **Escalation Path:**
@@ -266,7 +441,7 @@ The primary valuation engine relies on `models/carspective_valuation_lgbm_v1.job
 
 ---
 
-## 10. PRODUCTION INGRESS & TLS CERTIFICATE REQUIREMENTS
+## 11. PRODUCTION INGRESS & TLS CERTIFICATE REQUIREMENTS
 
 The production edge gateway (`docker/nginx/`) terminates TLS on port 443 and enforces strict fail-closed security invariants:
 
