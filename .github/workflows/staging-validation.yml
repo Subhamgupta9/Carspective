@@ -369,9 +369,9 @@ jobs:
           echo "Prometheus telemetry, authentication & alert specifications VERIFIED."
 
       # ========================================================================
-      # 10. POSTGRESQL BACKUP & DISPOSABLE RESTORE DRILL
+      # 10. POSTGRESQL BACKUP ORCHESTRATION & DISPOSABLE RESTORE DRILL
       # ========================================================================
-      - name: Execute PostgreSQL Backup & Isolated Target Restore Drill
+      - name: Execute PostgreSQL Backup Orchestration & Isolated Target Restore Drill
         run: |
           DB_IP=$(docker inspect carspective-prod-db --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
           STAGING_PG_URL="postgresql://carspective:$POSTGRES_PASSWORD@$DB_IP:5432/carspective_prod"
@@ -400,33 +400,82 @@ jobs:
               engine.dispose()
           "
 
-          echo "2. Executing automated PostgreSQL backup..."
+          echo "2. Executing automated PostgreSQL backup orchestration..."
           export PGPASSWORD="$POSTGRES_PASSWORD"
-          python scripts/backup_postgresql.py \
+          ORCH_OUTPUT=$(python scripts/orchestrate_backup.py \
             --db-url "$STAGING_PG_URL" \
-            --output-dir "$BACKUP_DIR" \
+            --staging-dir "$BACKUP_DIR" \
             --retention-count 3 \
-            --json
+            --storage-type dry-run \
+            --s3-prefix "staging/postgres/" \
+            --remote-retention-count 5 \
+            --json)
+          echo "$ORCH_OUTPUT"
+          echo "$ORCH_OUTPUT" | jq -e '.success == true and .skipped == false and .replication.replicated == true'
 
-          BACKUP_FILE=$(find "$BACKUP_DIR" -name "*.dump" | head -n 1)
-          echo "Created backup archive: $BACKUP_FILE"
-          test -f "$BACKUP_FILE"
-          test -f "$BACKUP_FILE.manifest.json"
+          # Deterministically extract the exact backup archive and manifest generated in this run
+          BACKUP_FILE=$(echo "$ORCH_OUTPUT" | jq -r '.local_backup.backup_file')
+          MANIFEST_FILE=$(echo "$ORCH_OUTPUT" | jq -r '.local_backup.manifest_file')
+          echo "Deterministic backup archive: $BACKUP_FILE"
+          echo "Deterministic backup manifest: $MANIFEST_FILE"
+          test -n "$BACKUP_FILE" && test -f "$BACKUP_FILE"
+          test -n "$MANIFEST_FILE" && test -f "$MANIFEST_FILE"
 
           echo "3. Verifying companion manifest checksum & schema..."
           python scripts/backup_postgresql.py --verify "$BACKUP_FILE" --json
 
-          echo "4. Creating separate empty disposable database for isolated recovery..."
+          echo "4. Validating process lock contention & clean-skip behavior..."
+          LOCK_FILE="$BACKUP_DIR/.orchestrate_backup.lock"
+          # Launch dedicated background sleeper to hold a live process lock during contention check
+          sleep 30 &
+          LOCK_HOLDER_PID=$!
+
+          # Ensure background holder is reaped and lock file removed even on unexpected step failure
+          cleanup_lock() {
+            if [ -n "$LOCK_HOLDER_PID" ]; then
+              kill "$LOCK_HOLDER_PID" 2>/dev/null || true
+              wait "$LOCK_HOLDER_PID" 2>/dev/null || true
+            fi
+            rm -f "$LOCK_FILE"
+          }
+          trap cleanup_lock EXIT INT TERM ERR
+
+          # Write valid lock JSON with the active PID
+          python -c "
+          import json, sys
+          with open(sys.argv[1], 'w') as f:
+              json.dump({
+                  'pid': int(sys.argv[2]),
+                  'timestamp_utc': '2026-10-17T00:00:00Z',
+                  'acquired_by': 'staging_contention_test'
+              }, f)
+          " "$LOCK_FILE" "$LOCK_HOLDER_PID"
+
+          # Execute orchestrator and assert clean skip on contention
+          SKIP_OUTPUT=$(python scripts/orchestrate_backup.py \
+            --db-url "$STAGING_PG_URL" \
+            --staging-dir "$BACKUP_DIR" \
+            --storage-type dry-run \
+            --json)
+          echo "Contention test output: $SKIP_OUTPUT"
+          echo "$SKIP_OUTPUT" | jq -e '.skipped == true and .reason == "lock_active"'
+
+          # Cleanup background process, reap zombie, remove lock, and disarm trap
+          cleanup_lock
+          trap - EXIT INT TERM ERR
+
+          echo "5. Creating separate empty disposable database for isolated recovery..."
+          psql -h "$DB_IP" -U carspective -d postgres -c "DROP DATABASE IF EXISTS carspective_restore_target;"
           psql -h "$DB_IP" -U carspective -d postgres -c "CREATE DATABASE carspective_restore_target;"
 
-          echo "5. Restoring backup archive into isolated disposable target database..."
+          echo "6. Restoring orchestrated backup archive into isolated disposable target database..."
           # Target has 0 tables, requiring zero overwrite bypass
           python scripts/restore_postgresql.py \
             --backup-path "$BACKUP_FILE" \
             --db-url "$RESTORE_TARGET_URL" \
             --json
 
-          echo "6. Verifying synthetic record and schema revision in restored database..."
+          echo "7. Verifying synthetic record and schema revision in restored database..."
           export RESTORE_TARGET_URL
           python -c "
           import os
@@ -451,10 +500,10 @@ jobs:
               engine.dispose()
           "
 
-          echo "7. Dropping disposable recovery database..."
+          echo "8. Dropping disposable recovery database..."
           psql -h "$DB_IP" -U carspective -d postgres -c "DROP DATABASE carspective_restore_target;"
 
-          echo "PostgreSQL live backup & isolated restore drill COMPLETED successfully."
+          echo "PostgreSQL live backup orchestration & isolated restore drill COMPLETED successfully."
 
       # ========================================================================
       # 11. DIAGNOSTIC COLLECTION ON FAILURE
