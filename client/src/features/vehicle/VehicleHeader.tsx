@@ -44,7 +44,7 @@ export const VehicleHeader: React.FC<VehicleHeaderProps> = ({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>
           {vehicle.variant && <span>Variant: {vehicle.variant}</span>}
           <span>• Powertrain: {vehicle.fuel_type || 'Petrol'} {vehicle.transmission_type || 'Manual'}</span>
-          {vehicle.km_driven && <span>• Odometer: {vehicle.km_driven.toLocaleString('en-IN')} km</span>}
+          {vehicle.km_driven != null && !isNaN(vehicle.km_driven) && <span>• Odometer: {vehicle.km_driven.toLocaleString('en-IN')} km</span>}
         </div>
       </div>
 

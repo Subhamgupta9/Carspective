@@ -150,6 +150,13 @@ def evaluate_vehicle_decision():
             asking_price=req.asking_price,
             km_driven=req.km_driven,
         )
+        if res is None:
+            return jsonify({
+                "type": "about:blank",
+                "title": "Vehicle Not Found",
+                "status": 404,
+                "detail": f"No verified vehicle taxonomy matching '{req.canonical_vehicle_id}'.",
+            }), 404
         return jsonify(res.model_dump()), 200
     except Exception as e:
         logger.error(f"Error evaluating vehicle decision: {e}", exc_info=True)

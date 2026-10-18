@@ -559,3 +559,32 @@ class TestDecisionRestEndpoints:
         data = resp.get_json()
         assert "prioritized_checklist" in data
         assert len(data["prioritized_checklist"]) > 0
+
+    def test_evaluate_vehicle_api_slug_normalization_toyota_innova_crysta(self, app_client):
+        """Verifies /api/v1/decision/evaluate resolves 'Toyota-Innova Crysta' with 200 OK."""
+        resp = app_client.post(
+            "/api/v1/decision/evaluate",
+            json={
+                "canonical_vehicle_id": "Toyota-Innova Crysta",
+                "profile": {"hard_constraints": {}},
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "Toyota" in data["vehicle_summary"]
+        assert "Innova Crysta" in data["vehicle_summary"]
+        assert data["intrinsic_score"] > 0
+
+    def test_evaluate_vehicle_api_unverified_vehicle_404(self, app_client):
+        """Verifies /api/v1/decision/evaluate returns 404 rather than 500 for unverified vehicles."""
+        resp = app_client.post(
+            "/api/v1/decision/evaluate",
+            json={
+                "canonical_vehicle_id": "Ferrari-F40",
+                "profile": {"hard_constraints": {}},
+            },
+        )
+        assert resp.status_code == 404
+        data = resp.get_json()
+        assert data["status"] == 404
+        assert "Vehicle Not Found" in data["title"]

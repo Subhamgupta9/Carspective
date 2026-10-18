@@ -134,6 +134,13 @@ class DecisionService:
             elif not variant:
                 variant = p.replace("-", " ").title()
 
+        # Fallback for non-'::' or raw slugs (e.g. 'Toyota-Innova Crysta', 'toyota-innova-crysta', 'Maruti-Swift')
+        if not model or not brand:
+            m_res, mod_res = self.taxonomy_repo.resolve_make_model_from_slug(canonical_id)
+            if m_res and mod_res:
+                brand = "Maruti" if "maruti" in m_res.name.lower() else m_res.name
+                model = mod_res.name
+
         return brand, model, gen, year, variant
 
     def _get_valuation_price(
@@ -609,7 +616,7 @@ class DecisionService:
         profile: UserRequirementsProfile,
         asking_price: Optional[float] = None,
         km_driven: Optional[float] = None,
-    ) -> DecisionEvaluationResponse:
+    ) -> Optional[DecisionEvaluationResponse]:
         """
         Comprehensive personalized decision evaluation:
         - Resolves canonical identity & specs
@@ -621,6 +628,8 @@ class DecisionService:
         t0 = time.perf_counter()
 
         brand, model, gen, year, variant = self._parse_canonical_id(canonical_vehicle_id)
+        if not brand or not model:
+            return None
         summary = f"{year or ''} {brand} {model}".strip()
         if variant:
             summary += f" {variant}"

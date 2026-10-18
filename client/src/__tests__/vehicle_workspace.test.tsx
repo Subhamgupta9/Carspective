@@ -9,6 +9,7 @@ import { VehicleScoreSection } from '../features/vehicle/workspace/VehicleScoreS
 import { KeySpecsSection } from '../features/vehicle/workspace/KeySpecsSection';
 import { SafetySection } from '../features/vehicle/workspace/SafetySection';
 import { InspectionCalloutSection } from '../features/vehicle/workspace/InspectionCalloutSection';
+import { OwnershipSection } from '../features/vehicle/workspace/OwnershipSection';
 import { AppProvider } from '../state/AppContext';
 import { VehiclePage } from '../pages/VehiclePage';
 import { vehicleApi } from '../api/vehicleApi';
@@ -228,5 +229,68 @@ describe('Phase 13 — Vehicle Intelligence Workspace Components', () => {
     const launchBtn = screen.getByText(/Open Full Interactive Checklist/);
     fireEvent.click(launchBtn);
     expect(onOpenMock).toHaveBeenCalled();
+  });
+
+  it('renders OwnershipSection with missing optional TCO and risk repair costs without toLocaleString crash', () => {
+    const mockInnovaOwnershipIntelligence = {
+      canonical_vehicle_id: 'toyota::innova-crysta::gen-1-2016::2016::gx',
+      model_slug: 'innova-crysta',
+      maintenance: {
+        service_interval_km: 10000,
+        service_interval_months: 12,
+        typical_annual_maintenance_inr: '₹8,000 – ₹12,000',
+        maintenance_complexity: 'Low',
+        parts_availability: 'Excellent',
+        routine_checklist: ['Engine oil replacement', 'Brake pad inspection'],
+        evidence_state: 'SUPPORTED' as const,
+      },
+      fuel: {
+        claimed_mileage_kmpl: 15.1,
+        real_world_city_kmpl: 11.2,
+        real_world_highway_kmpl: 14.5,
+        fuel_type: 'Diesel',
+      },
+      tco_1_year: null as any,
+      tco_3_year: null as any,
+      tco_5_year: null as any,
+      risk_signals: [
+        {
+          category: 'Fuel Cost Risk',
+          severity: 'LOW' as const,
+          title: 'Manageable Fuel Running Cost',
+          description: 'Favorable power-to-weight ratio and efficient fuel delivery.',
+          mitigation_advice: 'Maintain correct tyre pressure.',
+          evidence_state: 'SUPPORTED',
+        },
+      ],
+      disclaimer: 'Empirical projection',
+    };
+
+    render(
+      <OwnershipSection
+        ownership={null}
+        ownershipIntelligence={mockInnovaOwnershipIntelligence as any}
+      />
+    );
+
+    expect(screen.getByText('Real-World Ownership & Lifecycle Economics')).toBeDefined();
+    expect(screen.getByText('Manageable Fuel Running Cost')).toBeDefined();
+    expect(screen.getByText(/Favorable power-to-weight ratio/)).toBeDefined();
+    expect(screen.getByText('10,000 km')).toBeDefined();
+  });
+
+  it('renders DealAnalyzerSection cleanly when dealAnalysis is null and fairMarketValue is absent', () => {
+    const onEvaluateMock = vi.fn();
+    render(
+      <DealAnalyzerSection
+        dealAnalysis={null}
+        fairMarketValue={null}
+        onEvaluateDeal={onEvaluateMock}
+      />
+    );
+
+    expect(screen.getByText('Commercial Deal Analyzer')).toBeDefined();
+    expect(screen.getByText('Seller Asking Price (₹)')).toBeDefined();
+    expect(screen.getByRole('button', { name: /Evaluate Deal/i })).toBeDefined();
   });
 });

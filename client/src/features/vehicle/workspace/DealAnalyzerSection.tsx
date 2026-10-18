@@ -186,7 +186,7 @@ export const DealAnalyzerSection: React.FC<DealAnalyzerSectionProps> = ({
                 </span>
               </div>
               <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                Asking ₹{dealAnalysis.asking_price.toLocaleString('en-IN')} vs FMV ₹{(dealAnalysis.valuation?.estimated_fair_market_value || fairMarketValue || 0).toLocaleString('en-IN')}
+                Asking ₹{dealAnalysis.asking_price != null ? dealAnalysis.asking_price.toLocaleString('en-IN') : '—'} vs FMV ₹{(dealAnalysis.valuation?.estimated_fair_market_value || fairMarketValue || 0).toLocaleString('en-IN')}
               </span>
             </div>
 

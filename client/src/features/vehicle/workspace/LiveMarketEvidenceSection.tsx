@@ -233,7 +233,7 @@ export const LiveMarketEvidenceSection: React.FC<LiveMarketEvidenceSectionProps>
               Historical: {formatLakhs(comparison_with_historical.historical_median_asking_price)} &rarr; Current: {formatLakhs(comparison_with_historical.current_median_asking_price)}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 'var(--space-1)' }}>
-              Historical sample: {comparison_with_historical.historical_sample_size.toLocaleString()} listings
+              Historical sample: {comparison_with_historical.historical_sample_size != null ? comparison_with_historical.historical_sample_size.toLocaleString() : '—'} listings
             </div>
           </div>
         )}

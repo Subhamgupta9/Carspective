@@ -20,6 +20,7 @@ import {
   Sliders,
   CheckCircle2,
 } from 'lucide-react';
+import { formatINRFull } from '../../../utils/formatters';
 
 export interface OwnershipSectionProps {
   ownership?: OwnershipProfile | null;
@@ -395,7 +396,7 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
                 {selectedHorizon}-Year Total Ownership Cost
               </span>
               <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)' }}>
-                ₹{currentTco.total_cost_inr.toLocaleString('en-IN')}
+                {currentTco.total_cost_inr != null ? `₹${currentTco.total_cost_inr.toLocaleString('en-IN')}` : '—'}
               </div>
             </div>
 
@@ -404,7 +405,7 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
                 Effective Running Burden
               </span>
               <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)' }}>
-                ₹{currentTco.cost_per_km_inr.toFixed(2)} / km
+                {currentTco.cost_per_km_inr != null ? `₹${currentTco.cost_per_km_inr.toFixed(2)} / km` : '—'}
               </div>
             </div>
 
@@ -413,7 +414,7 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
                 Net Expected Depreciation
               </span>
               <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-warning)' }}>
-                ₹{currentTco.depreciation_cost_inr.toLocaleString('en-IN')}
+                {currentTco.depreciation_cost_inr != null ? `₹${currentTco.depreciation_cost_inr.toLocaleString('en-IN')}` : '—'}
               </div>
             </div>
           </div>
@@ -442,7 +443,7 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
                 </span>
 
                 <span style={{ color: 'var(--text-secondary)' }}>
-                  ₹{comp.amount_inr.toLocaleString('en-IN')}
+                  {comp.amount_inr != null ? `₹${comp.amount_inr.toLocaleString('en-IN')}` : '—'}
                 </span>
 
                 {/* Progress bar */}
@@ -522,11 +523,11 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
                     {item.milestone_name}
                   </span>
                   <span style={{ color: 'var(--color-primary)', fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--font-size-xs)' }}>
-                    ₹{item.estimated_cost_inr.toLocaleString('en-IN')}
+                    {item.estimated_cost_inr != null ? `₹${item.estimated_cost_inr.toLocaleString('en-IN')}` : '—'}
                   </span>
                 </div>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  At {item.interval_km.toLocaleString('en-IN')} km ({item.interval_months} mo)
+                  At {item.interval_km != null ? `${item.interval_km.toLocaleString('en-IN')} km` : '—'} ({item.interval_months || '—'} mo)
                 </span>
                 <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
                   Tasks: {item.typical_tasks.slice(0, 3).join(', ')}
@@ -558,9 +559,9 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {riskSignals.map((risk) => (
+            {riskSignals.map((risk, idx) => (
               <div
-                key={risk.risk_id}
+                key={risk.risk_id || `risk-${idx}`}
                 style={{
                   padding: 'var(--space-3) var(--space-4)',
                   backgroundColor: 'var(--bg-primary)',
@@ -573,7 +574,7 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
                   gap: 'var(--space-2)',
                 }}
               >
-                <div>
+                <div style={{ flex: '1 1 280px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     <Badge variant={risk.severity === 'CRITICAL' ? 'danger' : 'warning'} size="sm">
                       {risk.severity}
@@ -583,18 +584,22 @@ export const OwnershipSection: React.FC<OwnershipSectionProps> = ({
                     </span>
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Component: <strong>{risk.component_affected}</strong>
-                    {risk.typical_occurrence_km ? ` • Typical occurrence: ~${risk.typical_occurrence_km.toLocaleString('en-IN')} km` : ''}
-                    {' • '}Preventative action: {risk.preventative_measure}
+                    {risk.component_affected && (
+                      <span>Component: <strong>{risk.component_affected}</strong> • </span>
+                    )}
+                    {risk.typical_occurrence_km != null ? `Typical occurrence: ~${risk.typical_occurrence_km.toLocaleString('en-IN')} km • ` : ''}
+                    {risk.description || risk.mitigation_advice || risk.preventative_measure}
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Est. Repair Cost</span>
-                  <div style={{ fontWeight: 'var(--font-weight-bold)', fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)' }}>
-                    ₹{risk.estimated_repair_cost_inr.toLocaleString('en-IN')}
+                {risk.estimated_repair_cost_inr != null && (
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Est. Repair Cost</span>
+                    <div style={{ fontWeight: 'var(--font-weight-bold)', fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)' }}>
+                      {formatINRFull(risk.estimated_repair_cost_inr)}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>

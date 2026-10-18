@@ -295,7 +295,7 @@ export const VehiclePage: React.FC<VehiclePageProps> = ({ vehicleId, onNavigate 
             {identity.generation && <span>{identity.generation}</span>}
             {identity.variant && <span>• Trim: <strong>{identity.variant}</strong></span>}
             <span>• Powertrain: {identity.fuel_type || 'Petrol'} • {identity.transmission_type || 'Manual'} ({identity.drivetrain || 'FWD'})</span>
-            {kmDriven && <span>• {kmDriven.toLocaleString('en-IN')} km</span>}
+            {kmDriven != null && !isNaN(kmDriven) && <span>• {kmDriven.toLocaleString('en-IN')} km</span>}
           </div>
         </div>
 

@@ -1028,14 +1028,18 @@ export interface TCOHorizonSummary {
 }
 
 export interface OwnershipRiskSignal {
-  risk_id: string;
+  risk_id?: string;
+  category?: string;
   title: string;
   severity: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
-  component_affected: string;
+  description?: string;
+  mitigation_advice?: string;
+  evidence_state?: string;
+  component_affected?: string;
   typical_occurrence_km?: number;
-  estimated_repair_cost_inr: number;
-  preventative_measure: string;
-  evidence_source: string;
+  estimated_repair_cost_inr?: number;
+  preventative_measure?: string;
+  evidence_source?: string;
 }
 
 export interface VehicleOwnershipIntelligence {
