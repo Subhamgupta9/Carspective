@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 import sqlalchemy as sa
 from sqlalchemy.dialects import sqlite, postgresql
 
-from server.config.settings import normalize_database_url, mask_database_url, Settings
+from server.config.settings import normalize_database_url, mask_database_url, Settings, ConfigurationError
 
 
 class TestDatabaseURLNormalization:
@@ -63,6 +63,16 @@ class TestDatabaseURLNormalization:
         assert normalize_database_url("") == ""
         assert normalize_database_url(None) == ""
         assert normalize_database_url("   ") == ""
+
+    def test_quoted_url_strips_quotes_and_normalizes(self):
+        double_quoted = '"postgresql://usr:secret@localhost:5432/carspective"'
+        assert normalize_database_url(double_quoted) == "postgresql+psycopg2://usr:secret@localhost:5432/carspective"
+        single_quoted = "'postgresql://usr:secret@localhost:5432/carspective'"
+        assert normalize_database_url(single_quoted) == "postgresql+psycopg2://usr:secret@localhost:5432/carspective"
+        quoted_psycopg2 = '"postgresql+psycopg2://usr:secret@localhost:5432/carspective"'
+        assert normalize_database_url(quoted_psycopg2) == "postgresql+psycopg2://usr:secret@localhost:5432/carspective"
+        quoted_sqlite = '"sqlite:////app/data/database/carspective.db"'
+        assert normalize_database_url(quoted_sqlite) == "sqlite:////app/data/database/carspective.db"
 
     def test_sqlalchemy_engine_dialect_resolution_with_normalized_url(self):
         """Confirm SQLAlchemy 2.1 resolves psycopg2 driver for normalized URL without DB connection."""
@@ -195,4 +205,94 @@ class TestMigrationEnumDowngradeRemediation:
             test_engine.dispose()
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+class TestProductionDeploymentSafetyInvariants:
+    """Verifies deployment safety invariants under production environment configuration."""
+
+    def test_production_startup_fails_fast_on_missing_database_url(self, monkeypatch):
+        """create_app strictly refuses to start when DATABASE_URL is missing in production."""
+        from server.config import settings
+        from server.app import create_app
+        monkeypatch.setenv("CARSPECTIVE_ENV", "production")
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-at-least-16-chars-long")
+        monkeypatch.setenv("ADMIN_API_KEY", "test-admin-key-at-least-16-chars-long")
+        monkeypatch.setenv("ALLOWED_HOSTS", "localhost")
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        settings.reload()
+
+        try:
+            with pytest.raises(ConfigurationError, match="DATABASE_URL must be specified and non-empty in production"):
+                create_app(validate_config=True)
+        finally:
+            monkeypatch.undo()
+            settings.reload()
+
+    def test_production_startup_fails_fast_on_invalid_database_url(self, monkeypatch):
+        """create_app strictly refuses to start when DATABASE_URL is malformed or invalid in production."""
+        from server.config import settings
+        from server.app import create_app
+        monkeypatch.setenv("CARSPECTIVE_ENV", "production")
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-at-least-16-chars-long")
+        monkeypatch.setenv("ADMIN_API_KEY", "test-admin-key-at-least-16-chars-long")
+        monkeypatch.setenv("ALLOWED_HOSTS", "localhost")
+        monkeypatch.setenv("DATABASE_URL", "not-a-valid-database-url")
+        settings.reload()
+
+        try:
+            with pytest.raises(ConfigurationError, match="DATABASE_URL is invalid"):
+                create_app(validate_config=True)
+        finally:
+            monkeypatch.undo()
+            settings.reload()
+
+    def test_in_memory_fallback_engine_cannot_serve_production_app(self, monkeypatch):
+        """In production, empty DATABASE_URL prevents the app factory from returning any usable server."""
+        from server.config import settings
+        from server.app import create_app
+        monkeypatch.setenv("CARSPECTIVE_ENV", "production")
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-at-least-16-chars-long")
+        monkeypatch.setenv("ADMIN_API_KEY", "test-admin-key-at-least-16-chars-long")
+        monkeypatch.setenv("ALLOWED_HOSTS", "localhost")
+        monkeypatch.setenv("DATABASE_URL", "")
+        settings.reload()
+
+        try:
+            # Factory must raise ConfigurationError and never return an app instance
+            with pytest.raises(ConfigurationError):
+                create_app(validate_config=True)
+        finally:
+            monkeypatch.undo()
+            settings.reload()
+
+    def test_empty_cors_allowed_origins_blocks_arbitrary_origins(self, monkeypatch):
+        """When CORS_ALLOWED_ORIGINS is empty, arbitrary origins receive no Access-Control-Allow-Origin header."""
+        from server.config import settings
+        from server.app import create_app
+        monkeypatch.setenv("CARSPECTIVE_ENV", "production")
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-at-least-16-chars-long")
+        monkeypatch.setenv("ADMIN_API_KEY", "test-admin-key-at-least-16-chars-long")
+        monkeypatch.setenv("ALLOWED_HOSTS", "localhost,testserver")
+        monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
+        monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "")
+        settings.reload()
+
+        try:
+            app = create_app(validate_config=False)
+            client = app.test_client()
+
+            # 1. Preflight OPTIONS request from untrusted origin
+            res_options = client.open("/api/v1/valuation", method="OPTIONS", headers={"Origin": "https://attacker.evil.com"})
+            assert res_options.headers.get("Access-Control-Allow-Origin") is None
+
+            # 2. Simple GET request from untrusted origin
+            res_get = client.get("/health/liveness", headers={"Origin": "https://arbitrary-site.com"})
+            assert res_get.headers.get("Access-Control-Allow-Origin") is None
+
+            # 3. Wildcard origin header
+            res_wildcard = client.get("/health/liveness", headers={"Origin": "*"})
+            assert res_wildcard.headers.get("Access-Control-Allow-Origin") is None
+        finally:
+            monkeypatch.undo()
+            settings.reload()
 

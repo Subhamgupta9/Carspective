@@ -56,7 +56,7 @@ def normalize_database_url(url: str) -> str:
     if not url or not isinstance(url, str):
         return "" if url is None else str(url)
 
-    trimmed = url.strip()
+    trimmed = url.strip().strip("'\"")
     if trimmed.startswith("postgresql://"):
         return "postgresql+psycopg2://" + trimmed[len("postgresql://"):]
     elif trimmed.startswith("postgres://"):
@@ -162,11 +162,7 @@ class Settings:
                 "Production security violation: ALLOWED_HOSTS must be non-empty in production."
             )
 
-        # 4. CORS Origins validation
-        if not self.ALLOWED_ORIGINS or len(self.ALLOWED_ORIGINS) == 0:
-            raise ConfigurationError(
-                "Production security violation: ALLOWED_ORIGINS must be non-empty in production."
-            )
+        # 4. CORS Origins validation (wildcard strictly prohibited in production)
         if any(origin == "*" for origin in self.ALLOWED_ORIGINS):
             raise ConfigurationError(
                 "Production security violation: Wildcard '*' is strictly forbidden in ALLOWED_ORIGINS in production."
@@ -189,6 +185,19 @@ class Settings:
             raise ConfigurationError(
                 "Production configuration violation: DATABASE_URL must be specified and non-empty in production. "
                 "Silent fallback to SQLite is prohibited in production."
+            )
+        try:
+            from sqlalchemy.engine import make_url
+            parsed_url = make_url(self.DATABASE_URL)
+            if not parsed_url.drivername:
+                raise ConfigurationError(
+                    "Production configuration violation: DATABASE_URL must specify a valid database driver."
+                )
+        except Exception as e:
+            if isinstance(e, ConfigurationError):
+                raise
+            raise ConfigurationError(
+                f"Production configuration violation: DATABASE_URL is invalid: {e}"
             )
 
 

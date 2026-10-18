@@ -38,13 +38,21 @@ def get_engine_kwargs(db_url: str) -> dict:
 
 
 normalized_db_url = normalize_database_url(settings.DATABASE_URL)
-is_sqlite = normalized_db_url.startswith("sqlite")
-engine_kwargs = get_engine_kwargs(settings.DATABASE_URL)
+is_sqlite = normalized_db_url.startswith("sqlite") if normalized_db_url else True
+engine_kwargs = get_engine_kwargs(settings.DATABASE_URL) if normalized_db_url else {}
 
-engine = create_engine(
-    normalized_db_url,
-    **engine_kwargs
-)
+if normalized_db_url:
+    try:
+        engine = create_engine(
+            normalized_db_url,
+            **engine_kwargs
+        )
+    except Exception:
+        # Safe in-memory placeholder engine to prevent module import crash when DATABASE_URL is invalid
+        engine = create_engine("sqlite:///:memory:", future=True)
+else:
+    # Safe in-memory placeholder engine to prevent module import crash when DATABASE_URL is unset
+    engine = create_engine("sqlite:///:memory:", future=True)
 
 # Enable foreign keys, busy timeout, and WAL journal mode for SQLite
 if is_sqlite:
