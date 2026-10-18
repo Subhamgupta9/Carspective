@@ -1,0 +1,44 @@
+# ==============================================================================
+# CARspective — Render Blueprint Infrastructure-as-Code Configuration
+# Phase 25B.2: Memory-Conscious Zero-Cost Production Web Service
+# ==============================================================================
+
+services:
+  - type: web
+    name: carspective-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health/liveness
+    envVars:
+      - key: CARSPECTIVE_ENV
+        value: production
+      - key: CARSPECTIVE_DEBUG
+        value: "false"
+      - key: TRUSTED_PROXIES
+        value: "1"
+      # Concurrency tuned for 512MB RAM ceiling (Single worker + 4 threads consumes ~175MB)
+      - key: GUNICORN_WORKERS
+        value: "1"
+      - key: GUNICORN_THREADS
+        value: "4"
+      - key: GUNICORN_WORKER_CLASS
+        value: gthread
+      - key: GUNICORN_TIMEOUT
+        value: "60"
+      # Cryptographic secrets generated automatically by Render on service initialization
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_API_KEY
+        generateValue: true
+      # Manual synchronization required in Render dashboard:
+      # DATABASE_URL: Managed Neon PostgreSQL connection string (with ?sslmode=require)
+      - key: DATABASE_URL
+        sync: false
+      # ALLOWED_HOSTS: Render subdomain (e.g. carspective-api.onrender.com) and optional custom domains
+      - key: ALLOWED_HOSTS
+        sync: false
+      # CORS_ALLOWED_ORIGINS: Vercel frontend URL (e.g. https://carspective.vercel.app)
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

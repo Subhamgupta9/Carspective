@@ -88,13 +88,13 @@ class Settings:
         else:
             self.DEBUG: bool = os.getenv("CARSPECTIVE_DEBUG", "True").lower() in ("true", "1")
 
-        # Database URL: default to SQLite in dev, configure via DATABASE_URL in prod
-        raw_db_url: str = os.getenv(
-            "DATABASE_URL",
-            f"sqlite:///{DATABASE_DIR / 'carspective.db'}"
-        )
+        # Database URL: default to SQLite in dev, require explicit DATABASE_URL in prod
+        env_db_url = os.getenv("DATABASE_URL")
+        if self.IS_PRODUCTION:
+            raw_db_url: str = env_db_url or ""
+        else:
+            raw_db_url: str = env_db_url or f"sqlite:///{DATABASE_DIR / 'carspective.db'}"
         self.DATABASE_URL: str = normalize_database_url(raw_db_url)
-
 
         self.API_PREFIX: str = "/api/v1"
 
@@ -118,11 +118,14 @@ class Settings:
         except ValueError:
             self.TRUSTED_PROXIES: int = 0
 
-        # CORS: Explicit allowed origins (wildcard disallowed in production)
-        raw_origins: str = os.getenv(
-            "CORS_ALLOWED_ORIGINS",
-            "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
-        )
+        # CORS: Explicit allowed origins (wildcard and implicit localhost disallowed in production)
+        if self.IS_PRODUCTION:
+            raw_origins: str = os.getenv("CORS_ALLOWED_ORIGINS", "")
+        else:
+            raw_origins: str = os.getenv(
+                "CORS_ALLOWED_ORIGINS",
+                "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+            )
         self.ALLOWED_ORIGINS: List[str] = [o.strip() for o in raw_origins.split(",") if o.strip()]
 
         # Baseline dataset & taxonomy
@@ -184,7 +187,8 @@ class Settings:
         # 7. DATABASE_URL validation
         if not self.DATABASE_URL or not self.DATABASE_URL.strip():
             raise ConfigurationError(
-                "Production configuration violation: DATABASE_URL must be specified and non-empty in production."
+                "Production configuration violation: DATABASE_URL must be specified and non-empty in production. "
+                "Silent fallback to SQLite is prohibited in production."
             )
 
 

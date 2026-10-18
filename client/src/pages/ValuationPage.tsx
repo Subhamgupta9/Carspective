@@ -22,6 +22,7 @@ export const ValuationPage: React.FC = () => {
 
   const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     try {
       const res = await valuationApi.getValuation({
@@ -95,16 +96,22 @@ export const ValuationPage: React.FC = () => {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
             <Button
               type="submit"
               variant="primary"
               size="lg"
               isLoading={isLoading}
+              disabled={isLoading}
               leftIcon={<BarChart3 size={18} />}
             >
               Compute Valuation
             </Button>
+            {isLoading && (
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                Connecting to valuation engine (free-tier cold start may take 45–60s on first request)...
+              </span>
+            )}
           </div>
         </form>
       </div>

@@ -114,14 +114,21 @@ def create_app(test_config=None, validate_config=None) -> Flask:
 
         # Host header validation in production (DNS rebinding / host spoofing defense)
         if settings.IS_PRODUCTION and not app.testing and not app.config.get("TESTING"):
-            raw_host = request.host
-            host_without_port = raw_host.split(":")[0]
-            if host_without_port not in settings.ALLOWED_HOSTS and raw_host not in settings.ALLOWED_HOSTS:
-                logger.warning(
-                    f'{{"event": "untrusted_host_blocked", "host": "{raw_host}", '
-                    f'"remote_addr": "{request.remote_addr}", "request_id": "{req_id}"}}'
-                )
-                abort(400, description=f"Untrusted Host header: {host_without_port}")
+            # Internal container liveness probes originating from local loopback are permitted
+            is_local_liveness = (
+                request.path in ("/health/liveness", "/health")
+                and request.remote_addr in ("127.0.0.1", "::1")
+                and request.host.split(":")[0] in ("127.0.0.1", "localhost")
+            )
+            if not is_local_liveness:
+                raw_host = request.host
+                host_without_port = raw_host.split(":")[0]
+                if host_without_port not in settings.ALLOWED_HOSTS and raw_host not in settings.ALLOWED_HOSTS:
+                    logger.warning(
+                        f'{{"event": "untrusted_host_blocked", "host": "{raw_host}", '
+                        f'"remote_addr": "{request.remote_addr}", "request_id": "{req_id}"}}'
+                    )
+                    abort(400, description=f"Untrusted Host header: {host_without_port}")
 
         if request.method == "OPTIONS":
             response = app.make_default_options_response()

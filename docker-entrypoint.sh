@@ -37,18 +37,29 @@ if [ "$AUTO_MIGRATE" = "true" ]; then
     echo "Migrations applied successfully."
 fi
 
-# If custom arguments are passed to the container, execute them
+# If custom arguments are passed to the container, execute them.
+# Standard server startup uses default CMD ["gunicorn", "server.wsgi:app"] or empty args.
 if [ "$#" -gt 0 ]; then
-    exec "$@"
+    if [ "$1" != "gunicorn" ] || { [ "$#" -eq 2 ] && [ "$2" != "server.wsgi:app" ]; } || [ "$#" -gt 2 ]; then
+        exec "$@"
+    fi
 fi
 
+
 # Default fallback: start production WSGI server
-echo "Starting CarSpective production WSGI server..."
+PORT_TO_BIND="${PORT:-5001}"
+WORKERS_COUNT="${GUNICORN_WORKERS:-1}"
+THREADS_COUNT="${GUNICORN_THREADS:-4}"
+WORKER_CLASS="${GUNICORN_WORKER_CLASS:-gthread}"
+TIMEOUT_SEC="${GUNICORN_TIMEOUT:-60}"
+
+echo "Starting CarSpective production WSGI server on port ${PORT_TO_BIND} (workers: ${WORKERS_COUNT}, threads: ${THREADS_COUNT}, class: ${WORKER_CLASS})..."
 exec gunicorn \
-    --bind 0.0.0.0:5001 \
-    --workers 4 \
-    --threads 2 \
-    --timeout 60 \
+    --bind "0.0.0.0:${PORT_TO_BIND}" \
+    --workers "${WORKERS_COUNT}" \
+    --threads "${THREADS_COUNT}" \
+    --worker-class "${WORKER_CLASS}" \
+    --timeout "${TIMEOUT_SEC}" \
     --access-logfile - \
     --error-logfile - \
     server.wsgi:app

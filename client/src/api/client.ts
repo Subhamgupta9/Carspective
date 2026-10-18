@@ -27,7 +27,8 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_TIMEOUT_MS = 15000;
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const DEFAULT_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 75000;
 
 export async function request<T>(
   url: string,
@@ -36,6 +37,10 @@ export async function request<T>(
 ): Promise<T> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
+
+  const resolvedUrl = (url.startsWith('http://') || url.startsWith('https://'))
+    ? url
+    : `${API_BASE_URL}${url.startsWith('/') ? url : `/${url}`}`;
 
   const config: RequestInit = {
     ...options,
@@ -48,7 +53,7 @@ export async function request<T>(
   };
 
   try {
-    const response = await fetch(url, config);
+    const response = await fetch(resolvedUrl, config);
     clearTimeout(id);
 
     if (!response.ok) {
@@ -76,7 +81,11 @@ export async function request<T>(
   } catch (err: any) {
     clearTimeout(id);
     if (err.name === 'AbortError') {
-      throw new ApiError(408, 'Request Timeout', `Request timed out after ${timeoutMs / 1000} seconds.`);
+      throw new ApiError(
+        408,
+        'Request Timeout',
+        `Request timed out after ${timeoutMs / 1000} seconds. If the server was sleeping (cold start), please wait a moment and retry.`
+      );
     }
     if (err instanceof ApiError) {
       throw err;
