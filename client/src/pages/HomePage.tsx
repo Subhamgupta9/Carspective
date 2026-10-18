@@ -21,17 +21,20 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { setCurrentVehicle } = useApp();
 
   const handleVehicleSelect = (item: { brand: string; model: string; year?: number; canonical_id?: string }) => {
+    const canonicalId =
+      item.canonical_id ||
+      `${item.brand.toLowerCase().replace(/\s+/g, '-')}::${item.model.toLowerCase().replace(/\s+/g, '-')}`;
     setCurrentVehicle({
       brand: item.brand,
       model: item.model,
       year: item.year || 2021,
-      canonical_id: item.canonical_id,
+      canonical_id: canonicalId,
       fuel_type: 'Petrol',
       transmission_type: 'Manual',
       asking_price: 850000,
       km_driven: 35000,
     });
-    onNavigate(`/vehicle/${encodeURIComponent(item.canonical_id || `${item.brand}-${item.model}`)}`);
+    onNavigate(`/vehicle/${encodeURIComponent(canonicalId)}`);
   };
 
   return (

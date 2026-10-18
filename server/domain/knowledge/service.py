@@ -98,6 +98,12 @@ class KnowledgeService:
         mod = self.taxonomy_repo.get_model_by_slug(make_slug, model_slug) if m else None
 
         if not m or not mod:
+            m_res, mod_res = self.taxonomy_repo.resolve_make_model_from_slug(canonical_id)
+            if m_res and mod_res:
+                m, mod = m_res, mod_res
+                make_slug, model_slug = m.slug, mod.slug
+
+        if not m or not mod:
             return None
 
         # Resolve generation

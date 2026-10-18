@@ -13,12 +13,12 @@ export interface SearchBoxProps {
 }
 
 const POPULAR_SUGGESTIONS = [
-  { brand: 'Honda', model: 'City', year: 2021 },
-  { brand: 'Hyundai', model: 'Creta', year: 2020 },
-  { brand: 'Maruti', model: 'Swift', year: 2019 },
-  { brand: 'Tata', model: 'Nexon', year: 2021 },
-  { brand: 'Toyota', model: 'Innova Crysta', year: 2018 },
-  { brand: 'Mahindra', model: 'Thar', year: 2022 },
+  { brand: 'Honda', model: 'City', year: 2021, canonical_id: 'honda::city' },
+  { brand: 'Hyundai', model: 'Creta', year: 2020, canonical_id: 'hyundai::creta' },
+  { brand: 'Maruti', model: 'Swift', year: 2019, canonical_id: 'maruti-suzuki::swift' },
+  { brand: 'Tata', model: 'Nexon', year: 2021, canonical_id: 'tata::nexon' },
+  { brand: 'Toyota', model: 'Innova Crysta', year: 2018, canonical_id: 'toyota::innova-crysta' },
+  { brand: 'Mahindra', model: 'Thar', year: 2022, canonical_id: 'mahindra::thar' },
 ];
 
 export const SearchBox: React.FC<SearchBoxProps> = ({

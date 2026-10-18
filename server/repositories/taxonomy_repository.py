@@ -284,6 +284,69 @@ class TaxonomyRepository:
         self._model_cache[key] = res
         return res
 
+    def resolve_make_model_from_slug(self, identifier: str) -> Tuple[Optional[Manufacturer], Optional[VehicleModel]]:
+        """
+        Resolves a raw or slugified vehicle identifier to its canonical Manufacturer and VehicleModel.
+        Handles canonical 'make::model' format, hyphenated slugs ('toyota-innova-crysta', 'Toyota-Innova Crysta'),
+        and manufacturer aliases ('Maruti-Swift').
+        Returns (None, None) if not resolved.
+        """
+        if not identifier or not identifier.strip():
+            return None, None
+
+        cid = identifier.strip()
+        if "::" in cid:
+            parts = cid.split("::")
+            m = self.get_manufacturer_by_slug(parts[0]) or self.find_manufacturer(parts[0])
+            mod = self.get_model_by_slug(m.slug, parts[1]) if m and len(parts) > 1 else None
+            if not mod and m and len(parts) > 1:
+                mod = self.find_model(m.id, parts[1])
+            return m, mod
+
+        all_mfgs = self.list_manufacturers(active_only=True)
+        candidates = []
+        for m in all_mfgs:
+            candidates.append((slugify(m.slug), m))
+            candidates.append((slugify(m.name), m))
+            candidates.append((m.name.lower(), m))
+            for a in getattr(m, "aliases", []):
+                candidates.append((slugify(a.alias), m))
+                candidates.append((a.alias.lower(), m))
+        candidates.sort(key=lambda x: len(x[0]), reverse=True)
+
+        cid_lower = cid.lower()
+        cid_slug = slugify(cid)
+        matched_mfg = None
+        remaining_model = None
+
+        for prefix, m in candidates:
+            for sep in ["-", " ", "_"]:
+                if cid_lower.startswith(prefix + sep):
+                    matched_mfg = m
+                    remaining_model = cid[len(prefix) + len(sep):].strip()
+                    break
+                if cid_slug.startswith(prefix + "-"):
+                    matched_mfg = m
+                    remaining_model = cid_slug[len(prefix) + 1:].strip()
+                    break
+            if matched_mfg:
+                break
+
+        if not matched_mfg and "-" in cid:
+            parts_h = cid.split("-", 1)
+            m = self.find_manufacturer(parts_h[0])
+            if m:
+                matched_mfg = m
+                remaining_model = parts_h[1].strip()
+
+        if matched_mfg and remaining_model:
+            mod = self.find_model(matched_mfg.id, remaining_model)
+            if not mod:
+                mod = self.find_model(matched_mfg.id, slugify(remaining_model))
+            return matched_mfg, mod
+
+        return None, None
+
     # 3. Generations & Years
     def list_generations(self, model_id: str) -> List[VehicleGeneration]:
         stmt = select(VehicleGeneration).where(VehicleGeneration.model_id == model_id).order_by(VehicleGeneration.year_start)

@@ -128,16 +128,21 @@ class VehicleWorkspaceService:
         manufacturer = self.taxonomy_repo.get_manufacturer_by_slug(make_slug)
         if not manufacturer:
             manufacturer = self.taxonomy_repo.find_manufacturer(make_slug)
-        if not manufacturer:
-            return None
 
         model_obj = None
-        if model_slug:
+        if manufacturer and model_slug:
             model_obj = self.taxonomy_repo.get_model_by_slug(manufacturer.slug, model_slug)
             if not model_obj:
                 model_obj = self.taxonomy_repo.find_model(manufacturer.id, model_slug)
 
-        if not model_obj:
+        # Fallback for non-'::' slugs (e.g. 'Toyota-Innova Crysta', 'toyota-innova-crysta', 'Maruti-Swift')
+        if not manufacturer or not model_obj:
+            m_res, mod_res = self.taxonomy_repo.resolve_make_model_from_slug(canonical_id)
+            if m_res and mod_res:
+                manufacturer = m_res
+                model_obj = mod_res
+
+        if not manufacturer or not model_obj:
             # Model cannot be resolved
             return None
 

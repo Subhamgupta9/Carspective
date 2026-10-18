@@ -167,6 +167,54 @@ def test_workspace_api_404_handling(app_client: FlaskClient):
     assert "Vehicle Not Found" in data["title"]
 
 
+def test_workspace_slug_and_hyphen_normalization_toyota_innova_crysta(app_client: FlaskClient):
+    """Verifies that 'Toyota-Innova Crysta' and 'toyota-innova-crysta' resolve correctly without 404."""
+    # 1. Exact production failure case: hyphen-separated brand and spaced model
+    resp = app_client.get("/api/v1/vehicles/workspace/Toyota-Innova%20Crysta")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["canonical_vehicle_id"].startswith("toyota::innova-crysta")
+    assert data["identity"]["brand"] == "Toyota"
+    assert data["identity"]["model"] == "Innova Crysta"
+    assert data["executive_summary"]["carspective_score"] is not None
+
+    # 2. Fully slugified format
+    resp_slug = app_client.get("/api/v1/vehicles/workspace/toyota-innova-crysta")
+    assert resp_slug.status_code == 200
+    assert resp_slug.get_json()["identity"]["brand"] == "Toyota"
+
+    # 3. Canonical format parity
+    resp_can = app_client.get("/api/v1/vehicles/workspace/toyota::innova-crysta")
+    assert resp_can.status_code == 200
+    assert resp_can.get_json()["identity"]["brand"] == "Toyota"
+
+
+def test_workspace_slug_popular_vehicles_normalization(app_client: FlaskClient):
+    """Verifies all popular homepage vehicle slugs resolve to verified workspace payloads."""
+    popular_slugs = [
+        ("Honda-City", "Honda", "City"),
+        ("Maruti-Swift", "Maruti Suzuki", "Swift"),
+        ("Tata-Nexon", "Tata", "Nexon"),
+        ("Mahindra-Thar", "Mahindra", "Thar"),
+    ]
+    for slug, expected_brand, expected_model in popular_slugs:
+        resp = app_client.get(f"/api/v1/vehicles/workspace/{slug}")
+        assert resp.status_code == 200, f"Expected 200 for slug '{slug}', got {resp.status_code}"
+        data = resp.get_json()
+        assert data["identity"]["brand"] == expected_brand
+        assert data["identity"]["model"] == expected_model
+
+
+def test_workspace_slug_invalid_vehicle_fails_closed_404(app_client: FlaskClient):
+    """Verifies unverified or fake vehicles strictly fail-closed with 404 and never fabricate matches."""
+    for invalid in ["Ferrari-F40", "Toyota-PhantomSupercar", "InvalidBrand-InvalidModel"]:
+        resp = app_client.get(f"/api/v1/vehicles/workspace/{invalid}")
+        assert resp.status_code == 404
+        data = resp.get_json()
+        assert data["status"] == 404
+        assert "Vehicle Not Found" in data["title"]
+
+
 def test_workspace_performance_sla(workspace_service: VehicleWorkspaceService):
     """Measures operational latency percentiles for the unified workspace synthesis."""
     cid = "maruti-suzuki::swift::gen-3-2018::2021::zxi"
