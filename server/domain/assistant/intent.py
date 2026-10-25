@@ -13,16 +13,46 @@ from server.domain.assistant.models import (
 
 # Canonical intent detection patterns (ordered by evaluation precedence)
 INTENT_PATTERNS = [
-    # 1. Comparison
+    # 1. Comparison (Explicit comparisons, fuel trade-offs, and resale benchmarks)
     (
         AssistantIntent.COMPARISON,
         [
-            r"\b(?:compare|comparison|versus|vs\.?|diff(?:erence)?)\b",
-            r"\b(?:better than|which (?:one|car) is|which should i pick|who wins)\b",
-            r"\b(?:safer than|more reliable than|cheaper to maintain than)\b",
+            r"\b(?:diesel.*(?:or|vs|against|over).*petrol|petrol.*(?:or|vs|against|over).*diesel)\b",
+            r"\b(?:which car has lower maintenance|better resale value)\b",
+            r"\b(?:compare|comparison|versus|vs\.?)\b",
+            r"\b(?:diff(?:erence)? between)\b",
         ]
     ),
-    # 2. Negotiation
+    # 2. Alternatives & Budget Discovery (high precedence)
+    (
+        AssistantIntent.ALTERNATIVES,
+        [
+            r"\b(?:alternatives?|other options?|similar cars?|what else)\b",
+            r"\b(?:what other (?:cars|vehicles)|competitors?)\b",
+            r"\b(?:better car|better options?|better alternative)\b",
+            r"\b(?:can i get a better|could i get a better|is there a better)\b",
+            r"\b(?:in the same budget|for the same (?:money|price|budget)|within (?:my|the|this) budget|in this budget)\b",
+            r"\b(?:should i consider another|consider (?:other|another) (?:car|model|option)|look for another)\b",
+            r"\b(?:is my selected car actually the best deal|best deal under|best (?:used )?(?:car|suv|sedan|hatchback) under)\b",
+            r"\b(?:which (?:used )?(?:car|suv|sedan|hatchback) is best under)\b",
+            r"\b(?:what (?:car|cars|suv|suvs|sedan|vehicle|vehicles) should i buy)\b",
+            r"\b(?:find alternatives|alternatives available|options near)\b",
+            r"\b(?:under|below|sub|less than|up to)\s*(?:inr\s*|rs\.?\s*|₹\s*)?\d+(?:\.\d+)?\s*(?:lakhs?|lac|l)\b",
+            r"\b(?:budget\s*(?:of|is|around|:)?\s*(?:inr\s*|rs\.?\s*|₹\s*)?\d+(?:\.\d+)?\s*(?:lakhs?|lac|l))\b",
+            r"\b(?:\d+(?:\.\d+)?\s*(?:lakhs?|lac|l)\s*budget)\b",
+        ]
+    ),
+    # 3. Secondary Comparison patterns
+    (
+        AssistantIntent.COMPARISON,
+        [
+            r"\b(?:diff(?:erence)?)\b",
+            r"\b(?:better than|which should i pick|who wins)\b",
+            r"\b(?:safer than|more reliable than|cheaper to maintain than)\b",
+            r"\b(?:which (?:one|car) is (?:better|cheaper|safer|faster))\b",
+        ]
+    ),
+    # 3. Negotiation
     (
         AssistantIntent.NEGOTIATION,
         [
@@ -31,7 +61,7 @@ INTENT_PATTERNS = [
             r"\b(?:price flexibility|room to negotiate)\b",
         ]
     ),
-    # 3. Deal Analysis
+    # 4. Deal Analysis
     (
         AssistantIntent.DEAL_ANALYSIS,
         [
@@ -41,7 +71,7 @@ INTENT_PATTERNS = [
             r"\b(?:deal quality|deal rating)\b",
         ]
     ),
-    # 4. Valuation
+    # 5. Valuation
     (
         AssistantIntent.VALUATION,
         [
@@ -51,7 +81,7 @@ INTENT_PATTERNS = [
             r"\b(?:asking-price baseline|historical price baseline)\b",
         ]
     ),
-    # 5. Inspection
+    # 6. Inspection
     (
         AssistantIntent.INSPECTION,
         [
@@ -61,7 +91,7 @@ INTENT_PATTERNS = [
             r"\b(?:mechanic check|pre-purchase inspection)\b",
         ]
     ),
-    # 6. Score
+    # 7. Score
     (
         AssistantIntent.SCORE,
         [
@@ -70,21 +100,13 @@ INTENT_PATTERNS = [
             r"\b(?:maintenance score|practicality score|resale score)\b",
         ]
     ),
-    # 7. Recommendation
+    # 8. Recommendation
     (
         AssistantIntent.RECOMMENDATION,
         [
             r"\b(?:should i buy|is this recommended|recommend(?:ation)?|good choice)\b",
             r"\b(?:why did (?:you|carspective) recommend|suitable for me|family fit)\b",
             r"\b(?:is this the right car|buy or skip)\b",
-        ]
-    ),
-    # 8. Alternatives
-    (
-        AssistantIntent.ALTERNATIVES,
-        [
-            r"\b(?:alternatives?|other options?|similar cars?|what else)\b",
-            r"\b(?:what other (?:cars|vehicles)|competitors?)\b",
         ]
     ),
     # 9. Risk
@@ -167,9 +189,13 @@ class IntentClassifier:
         # Contextual check: If query mentions a second car while a vehicle is already active,
         # it's a comparison query (e.g. "What about the Verna?" or "How about City?")
         if context and context.current_vehicle:
-            comp_keywords = ["what about", "how about", "vs", "versus", "compare with", "instead of"]
-            if any(k in clean_msg for k in comp_keywords):
-                return AssistantIntent.COMPARISON
+            # If the user is asking for budget discovery or alternatives (e.g. "under 8 lakh", "alternatives"),
+            # do not hijack to COMPARISON!
+            is_budget_or_alt = bool(re.search(r'\b(?:under|below|sub|<|less than|up to|budget|alternatives?)\b', clean_msg))
+            if not is_budget_or_alt:
+                comp_keywords = ["what about", "how about", "vs", "versus", "compare with", "instead of"]
+                if any(k in clean_msg for k in comp_keywords):
+                    return AssistantIntent.COMPARISON
 
         # Contextual check: "Is it expensive?" with asking price present -> DEAL_ANALYSIS
         if "expensive" in clean_msg or "cheap" in clean_msg:

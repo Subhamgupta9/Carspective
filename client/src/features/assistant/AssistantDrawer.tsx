@@ -29,11 +29,11 @@ export const AssistantDrawer: React.FC = () => {
     {
       role: 'assistant',
       content:
-        "Hello, I'm the CarSpective Assistant. I can explain market valuation baselines, deal quality, inspection checkpoints, and safety ratings grounded in empirical evidence.",
+        "Hello, I'm the CarSpective Assistant, your automotive intelligence and buying advisor. You can ask about this vehicle, compare rivals across segments, find better alternatives in your budget, or evaluate fuel and maintenance trade-offs.",
       nextActions: [
-        'Is the asking price fair?',
-        'What should I inspect first?',
-        'How does safety score compare?',
+        'Can I get a better car in this budget?',
+        'Compare Honda City, Verna and Virtus',
+        'Which used SUV is best under ₹8 lakh?',
       ],
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
@@ -331,7 +331,7 @@ export const AssistantDrawer: React.FC = () => {
             type="text"
             value={inputQuery}
             onChange={e => setInputQuery(e.target.value)}
-            placeholder="Ask about this car's value or deal..."
+            placeholder="Ask about valuation, alternatives, comparisons..."
             aria-label="Message to CarSpective AI"
             style={{
               flex: 1,

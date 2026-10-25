@@ -69,6 +69,11 @@ MODEL_PRICE_BENCHMARKS = {
     "sonet": (650000, 1150000),
     "polo": (350000, 700000),
     "kwid": (220000, 400000),
+    "virtus": (900000, 1600000),
+    "slavia": (900000, 1600000),
+    "punch": (500000, 900000),
+    "taigun": (950000, 1700000),
+    "kushaq": (950000, 1700000),
 }
 
 class DiscoverySearchService:

@@ -86,6 +86,11 @@ MODEL_ALIASES: Dict[str, Tuple[str, Optional[str]]] = {
     "carens": ("Carens", "Kia"),
     "kwid": ("KWID", "Renault"),
     "polo": ("Polo", "Volkswagen"),
+    "virtus": ("Virtus", "Volkswagen"),
+    "slavia": ("Slavia", "Skoda"),
+    "taigun": ("Taigun", "Volkswagen"),
+    "kushaq": ("Kushaq", "Skoda"),
+    "punch": ("Punch", "Tata"),
 }
 
 FUEL_ALIASES: Dict[str, str] = {

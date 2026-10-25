@@ -161,12 +161,12 @@ def test_recommendation_strong_consideration_match(recommendation_service: Recom
         manufacturing_year=2020,
         fuel_type="Petrol",
         listing=ListingContext(
-            asking_price=500000.0,
+            asking_price=750000.0,
             km_driven=35000.0,
             service_history_status="FULL_SERVICE_HISTORY"
         ),
         user_profile=UserProfile(
-            budget_max=600000.0,
+            budget_max=850000.0,
             family_size=4,
             primary_usage="CITY",
             safety_priority="HIGH"

@@ -537,3 +537,408 @@ def test_assistant_request_legacy_payload_immutability_and_nulls():
     assert req_nulls.vehicle is None
     assert req_nulls.compared_vehicles is None
     assert req_nulls.listing is None
+
+
+# ────────────────────────────────────────────────────────────────────
+# 12. CarSpective AI 2.0 — Cross-Car Intelligence & Buying Advisor
+# ────────────────────────────────────────────────────────────────────
+
+def test_cross_car_query_can_i_get_a_better_car_in_same_budget(assistant_service):
+    """
+    Test Query 1: 'Can I get a better car than this in the same budget?'
+    Verifies that the assistant evaluates alternatives within the active car's budget,
+    verifies structured candidate data, and distinguishes Model Estimates from Asking Price.
+    """
+    req = AssistantRequest(
+        message="Can I get a better car than this in the same budget?",
+        vehicle=VehicleContextInput(brand="Honda", model="City", manufacturing_year=2020),
+        listing=ListingContextInput(asking_price=850000.0)
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    assert "Tata Nexon" in res.answer or "Nexon" in res.answer
+    assert "Brezza" in res.answer or "Maruti" in res.answer
+    assert "Model Estimate" in res.answer
+    assert len(res.suggested_next_actions) > 0
+
+    # Validate structured evidence bundle
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 850000.0
+    assert "discovery.candidate.1" in b_map
+    assert "recommendation.alternatives" in b_map
+
+    c1 = b_map["discovery.candidate.1"].value
+    assert c1["brand"] == "Tata"
+    assert c1["model"] == "Nexon"
+    assert c1["safety_stars"] == 5
+    assert c1["price_range"][0] <= 850000.0
+
+
+def test_three_car_comparison_city_verna_virtus(assistant_service):
+    """
+    Test Query 2: 'Compare Honda City, Hyundai Verna and Volkswagen Virtus.'
+    Verifies extraction of all 3 vehicles, multi-car comparison across safety,
+    chassis dynamics, boot capacity, and maintenance.
+    """
+    req = AssistantRequest(
+        message="Compare Honda City, Hyundai Verna and Volkswagen Virtus."
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.COMPARISON
+    assert "Volkswagen Virtus" in res.answer
+    assert "Honda City" in res.answer
+    assert "Hyundai Verna" in res.answer
+    assert "Global NCAP" in res.answer or "Safety" in res.answer
+    assert "boot" in res.answer.lower()
+    assert "COMPARISON" in res.referenced_domains
+
+    # Validate comparison evidence presence
+    b_ids = {it.id for it in res.evidence_bundle}
+    assert "comparison.overall_winner" in b_ids or "comparison.cat.safety" in b_ids
+
+
+def test_cross_car_query_no_selected_vehicle_which_used_suv_under_8_lakh(assistant_service):
+    """
+    Test Query 3: 'Which used SUV is best under ₹8 lakh?' with NO active vehicle.
+    Verifies that queries without a selected vehicle do not fail and discover
+    evidence-grounded SUV alternatives within the specified budget.
+    """
+    req = AssistantRequest(
+        message="Which used SUV is best under ₹8 lakh?",
+        vehicle=None,
+        listing=None
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    assert "No active vehicle context established" not in res.answer
+    assert "Tata Nexon" in res.answer or "Nexon" in res.answer
+    assert "Brezza" in res.answer or "Maruti" in res.answer
+    assert "Model Estimate" in res.answer
+
+    # Validate budget anchor and body type filtering
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 800000.0
+    assert b_map["discovery.budget_anchor"].value["body_type"] == "SUV"
+
+    # All candidate models must be SUVs
+    for it_id, it in b_map.items():
+        if it_id.startswith("discovery.candidate."):
+            assert it.value["body_type"] == "SUV"
+
+
+def test_comparison_diesel_vs_petrol(assistant_service):
+    """
+    Test Query 4: 'Should I buy this 2019 diesel car or a newer petrol alternative?'
+    Verifies evidence-grounded NGT 10-year rule explanation and break-even mileage math.
+    """
+    req = AssistantRequest(
+        message="Should I buy this 2019 diesel car or a newer petrol alternative?",
+        vehicle=VehicleContextInput(brand="Hyundai", model="Creta", manufacturing_year=2019, fuel_type="Diesel")
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.COMPARISON
+    assert "NGT" in res.answer or "10-Year" in res.answer or "10-year" in res.answer
+    assert "1,200" in res.answer or "1,500" in res.answer or "break-even" in res.answer.lower()
+    assert "petrol" in res.answer.lower()
+    assert "diesel" in res.answer.lower()
+    assert len(res.suggested_next_actions) > 0
+
+
+def test_comparison_lower_maintenance_and_better_resale(assistant_service):
+    """
+    Test Query 5: 'Which car has lower maintenance costs and better resale value?'
+    Verifies evidence-grounded ranking of manufacturer maintenance and resale retention.
+    """
+    req = AssistantRequest(
+        message="Which car has lower maintenance costs and better resale value?"
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.COMPARISON
+    assert "Maruti Suzuki" in res.answer
+    assert "Toyota" in res.answer
+    assert "Hyundai" in res.answer
+    assert "Volkswagen" in res.answer or "European" in res.answer
+    assert "resale" in res.answer.lower()
+
+
+def test_cross_car_alternatives_near_my_location(assistant_service):
+    """
+    Test Query 6: 'Find alternatives available near my location.'
+    Verifies alternative recommendations with metro market availability guidance.
+    """
+    req = AssistantRequest(
+        message="Find alternatives available near my location.",
+        vehicle=VehicleContextInput(brand="Honda", model="City", manufacturing_year=2020),
+        listing=ListingContextInput(asking_price=850000.0)
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    assert len(res.evidence_bundle) > 0
+    assert "Explore" in res.answer or "alternatives" in res.answer.lower()
+    # Suggested next actions should guide user to location/explore
+    assert any("Explore" in a or "filter" in a.lower() or "compare" in a.lower() for a in res.suggested_next_actions)
+
+
+def test_cross_car_is_selected_car_best_deal_or_consider_another(assistant_service):
+    """
+    Test Query 7: 'Is my selected car actually the best deal, or should I consider another model?'
+    Verifies cross-car intelligence comparing active car against alternative options.
+    """
+    req = AssistantRequest(
+        message="Is my selected car actually the best deal, or should I consider another model?",
+        vehicle=VehicleContextInput(brand="Honda", model="City", manufacturing_year=2020),
+        listing=ListingContextInput(asking_price=850000.0)
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    assert len(res.evidence_bundle) > 0
+    assert "Honda City" in res.answer
+    assert "Model Estimate" in res.answer
+
+    # Evidence bundle must contain comparison verdict
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.comparison_verdict" in b_map
+    assert "Honda City" in b_map["discovery.comparison_verdict"].claim
+
+
+# ────────────────────────────────────────────────────────────────────
+# 13. Budget Filtering & Stated Budget Integrity Regression Tests
+# ────────────────────────────────────────────────────────────────────
+
+def test_budget_filtering_5l_without_selected_vehicle(assistant_service):
+    """
+    Budget = ₹5L, NO active vehicle.
+    Asserts:
+    - Intent routes to ALTERNATIVES.
+    - Anchor budget is ₹5,00,000.
+    - Every primary candidate's maximum estimated price is <= ₹5,00,000.
+    - Stretch options (if present) exceed stated budget and are labeled separately.
+    """
+    req = AssistantRequest(
+        message="What is the best used car under 5 lakh?",
+        vehicle=None,
+        listing=None
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 500000.0
+
+    # Assert every primary candidate has max estimated price <= 5,00,000
+    primary_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.candidate.")]
+    assert len(primary_cands) >= 1
+    for cand in primary_cands:
+        assert cand["price_range"][1] <= 500000.0, f"{cand['model']} max price {cand['price_range'][1]} exceeds 5L budget"
+
+    # Assert visible answer formatting
+    assert "Within Budget" in res.answer
+    assert "Model Estimate" in res.answer
+
+    # Assert stretch options (if present) are strictly over-budget
+    stretch_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.stretch.")]
+    for s_cand in stretch_cands:
+        assert s_cand["price_range"][1] > 500000.0
+    if stretch_cands:
+        assert "Stretch options" in res.answer
+        assert "Exceeds" in res.answer
+
+
+def test_budget_filtering_5l_with_selected_vehicle_active_price_overridden(assistant_service):
+    """
+    Budget = ₹5L, WITH active vehicle priced at ₹8.5L.
+    Asserts:
+    - User's stated ₹5L budget overrides the active car's ₹8.5L asking price.
+    - Every primary candidate's maximum estimated price is <= ₹5,00,000.
+    - Selected vehicle (City) is excluded from alternatives.
+    """
+    req = AssistantRequest(
+        message="Can I get a better car under 5 lakh?",
+        vehicle=VehicleContextInput(brand="Honda", model="City", manufacturing_year=2020),
+        listing=ListingContextInput(asking_price=850000.0)
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    # CRITICAL: Anchor must be 500,000, NOT the active car's 850,000 asking price
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 500000.0
+
+    primary_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.candidate.")]
+    assert len(primary_cands) >= 1
+    for cand in primary_cands:
+        assert cand["price_range"][1] <= 500000.0, f"{cand['model']} max price {cand['price_range'][1]} exceeds 5L budget"
+        assert cand["model"] != "City"
+
+
+def test_budget_filtering_8l_without_selected_vehicle(assistant_service):
+    """
+    Budget = ₹8L, NO active vehicle.
+    Asserts:
+    - Intent routes to ALTERNATIVES.
+    - Anchor budget is ₹8,00,000.
+    - Every primary candidate's maximum estimated price is <= ₹8,00,000.
+    """
+    req = AssistantRequest(
+        message="Which used car should I buy under 8 lakh?",
+        vehicle=None,
+        listing=None
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 800000.0
+
+    primary_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.candidate.")]
+    assert len(primary_cands) >= 1
+    for cand in primary_cands:
+        assert cand["price_range"][1] <= 800000.0, f"{cand['model']} max price {cand['price_range'][1]} exceeds 8L budget"
+
+
+def test_budget_filtering_8l_with_selected_vehicle_active_price_overridden(assistant_service):
+    """
+    Budget = ₹8L, WITH active vehicle priced at ₹11.5L (VW Virtus).
+    Asserts:
+    - User's stated ₹8L budget overrides the active car's ₹11.5L asking price.
+    - Every primary candidate's maximum estimated price is <= ₹8,00,000.
+    - Active car (Virtus) is excluded from alternatives.
+    """
+    req = AssistantRequest(
+        message="What can I buy under 8 lakh instead of this car?",
+        vehicle=VehicleContextInput(brand="Volkswagen", model="Virtus", manufacturing_year=2022),
+        listing=ListingContextInput(asking_price=1150000.0)
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 800000.0
+
+    primary_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.candidate.")]
+    assert len(primary_cands) >= 1
+    for cand in primary_cands:
+        assert cand["price_range"][1] <= 800000.0, f"{cand['model']} max price {cand['price_range'][1]} exceeds 8L budget"
+        assert cand["model"] != "Virtus"
+
+
+def test_budget_filtering_10l_without_selected_vehicle(assistant_service):
+    """
+    Budget = ₹10L, NO active vehicle.
+    Asserts:
+    - Intent routes to ALTERNATIVES.
+    - Anchor budget is ₹10,00,000.
+    - Every primary candidate's maximum estimated price is <= ₹10,00,000.
+    - Any vehicle exceeding ₹10L is placed strictly in stretch options.
+    """
+    req = AssistantRequest(
+        message="What is the best car under 10 lakh?",
+        vehicle=None,
+        listing=None
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 1000000.0
+
+    primary_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.candidate.")]
+    assert len(primary_cands) >= 1
+    for cand in primary_cands:
+        assert cand["price_range"][1] <= 1000000.0, f"{cand['model']} max price {cand['price_range'][1]} exceeds 10L budget"
+
+    # Virtus (max 12L) must NOT be in primary candidates
+    assert "Virtus" not in [c["model"] for c in primary_cands]
+
+    # If stretch option exists (e.g. Virtus), verify it is in stretch bundle and labeled
+    stretch_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.stretch.")]
+    for sc in stretch_cands:
+        assert sc["price_range"][1] > 1000000.0
+    if stretch_cands:
+        assert "Stretch options" in res.answer
+        assert "Exceeds" in res.answer
+
+
+def test_budget_filtering_10l_with_selected_vehicle_active_price_overridden(assistant_service):
+    """
+    Budget = ₹10L, WITH active vehicle priced at ₹14.5L (Mahindra Thar).
+    Asserts:
+    - User's stated ₹10L budget overrides the active car's ₹14.5L asking price.
+    - Every primary candidate's maximum estimated price is <= ₹10,00,000.
+    """
+    req = AssistantRequest(
+        message="Find me alternatives under 10 lakh",
+        vehicle=VehicleContextInput(brand="Mahindra", model="Thar", manufacturing_year=2021),
+        listing=ListingContextInput(asking_price=1450000.0)
+    )
+    res = assistant_service.handle_message(req)
+
+    assert res.intent == AssistantIntent.ALTERNATIVES
+    b_map = {it.id: it for it in res.evidence_bundle}
+    assert "discovery.budget_anchor" in b_map
+    assert b_map["discovery.budget_anchor"].value["budget_inr"] == 1000000.0
+
+    primary_cands = [it.value for k, it in b_map.items() if k.startswith("discovery.candidate.")]
+    assert len(primary_cands) >= 1
+    for cand in primary_cands:
+        assert cand["price_range"][1] <= 1000000.0, f"{cand['model']} max price {cand['price_range'][1]} exceeds 10L budget"
+
+
+def test_active_vehicle_asking_price_used_only_when_user_specifies_no_budget(assistant_service):
+    """
+    Verifies that active vehicle asking price is used ONLY as a contextual fallback
+    when the user asks 'in the same budget' or gives no budget, but is NEVER used
+    when the user states an explicit budget.
+    """
+    # Case 1: Explicit user budget overrides active listing asking price
+    req_explicit = AssistantRequest(
+        message="What car should I buy under 6 lakh?",
+        vehicle=VehicleContextInput(brand="Honda", model="City", manufacturing_year=2020),
+        listing=ListingContextInput(asking_price=900000.0)
+    )
+    res_explicit = assistant_service.handle_message(req_explicit)
+    b_map1 = {it.id: it for it in res_explicit.evidence_bundle}
+    assert b_map1["discovery.budget_anchor"].value["budget_inr"] == 600000.0
+    for cand in [it.value for k, it in b_map1.items() if k.startswith("discovery.candidate.")]:
+        assert cand["price_range"][1] <= 600000.0
+
+    # Case 2: User asks 'in the same budget' -> safely uses active listing asking price
+    req_same = AssistantRequest(
+        message="Can I get a better car than this in the same budget?",
+        vehicle=VehicleContextInput(brand="Honda", model="City", manufacturing_year=2020),
+        listing=ListingContextInput(asking_price=900000.0)
+    )
+    res_same = assistant_service.handle_message(req_same)
+    b_map2 = {it.id: it for it in res_same.evidence_bundle}
+    assert b_map2["discovery.budget_anchor"].value["budget_inr"] == 900000.0
+
+
+def test_epistemic_price_and_maintenance_disclosures_present(assistant_service):
+    """
+    Verifies that all prices and routine maintenance costs are labeled as Model Estimates,
+    and the answer includes clear epistemic disclosures distinguishing historical asking
+    baselines from live dealer inventory or verified transaction registry prices.
+    """
+    req = AssistantRequest(
+        message="What car should I buy under 8 lakh?",
+    )
+    res = assistant_service.handle_message(req)
+
+    assert "Model Estimate" in res.answer
+    assert "Epistemic Pricing & Cost Disclosure" in res.answer
+    assert "live dealer inventory" in res.answer.lower()
+    assert "verified transaction" in res.answer.lower()

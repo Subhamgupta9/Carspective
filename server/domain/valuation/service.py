@@ -213,7 +213,11 @@ class ValuationService:
         # Categorical feature resolution with immutable preprocessing result reuse
         effective_bodytype = req.bodytype
         if not effective_bodytype and tax_res and tax_res.hierarchy:
-            effective_bodytype = tax_res.hierarchy.get("model", {}).get("body_type")
+            model_info = tax_res.hierarchy.get("model")
+            if isinstance(model_info, dict):
+                effective_bodytype = model_info.get("body_type")
+            elif isinstance(tax_res.hierarchy.get("body_type"), str):
+                effective_bodytype = tax_res.hierarchy.get("body_type")
         effective_bodytype = effective_bodytype or "Hatchback"
 
         cat_key = (

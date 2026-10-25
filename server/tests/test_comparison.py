@@ -288,7 +288,7 @@ def test_deal_comparison_evaluates_listing_merit(comparison_service: ComparisonS
         ],
         mode=ComparisonMode.GENERAL,
         listings=[
-            ComparisonListing(vehicle_index=0, asking_price=500000.0), # Fair deal on Nexon
+            ComparisonListing(vehicle_index=0, asking_price=750000.0), # Fair deal on Nexon
             ComparisonListing(vehicle_index=1, asking_price=1600000.0) # Overpriced on Creta
         ]
     )

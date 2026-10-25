@@ -359,6 +359,10 @@ class RecommendationService:
 
         return RecommendationVerdict.CONSIDER
 
+    def generate_recommendation(self, req: RecommendationRequest) -> RecommendationResponse:
+        """Alias for evaluate_recommendation."""
+        return self.evaluate_recommendation(req)
+
     def _find_alternatives(
         self,
         target_brand: str,
@@ -372,7 +376,7 @@ class RecommendationService:
         t_brand = target_brand.lower()
         alternatives = []
 
-        # Verified catalog database
+        # Verified catalog database across Indian market segments
         catalog = [
             {
                 "brand": "Tata",
@@ -382,7 +386,17 @@ class RecommendationService:
                 "score": 84,
                 "safety_stars": 5,
                 "segment": "COMPACT_SUV",
-                "advantage": "Verified 5-Star Global NCAP crash safety rating and rugged rough-road clearance."
+                "advantage": "Verified 5-Star Global NCAP crash safety rating and 209 mm rough-road ground clearance."
+            },
+            {
+                "brand": "Maruti",
+                "model": "Brezza",
+                "year": 2020,
+                "price": 750000,
+                "score": 81,
+                "safety_stars": 4,
+                "segment": "COMPACT_SUV",
+                "advantage": "Verified 4-Star Global NCAP rating, 19.8 km/l fuel efficiency, and lowest annual maintenance parts basket."
             },
             {
                 "brand": "Hyundai",
@@ -392,7 +406,37 @@ class RecommendationService:
                 "score": 83,
                 "safety_stars": 3,
                 "segment": "MID_SUV",
-                "advantage": "High secondary market liquidity, refined cabin packaging, and extensive service support."
+                "advantage": "High secondary market liquidity, refined cabin packaging, and extensive nationwide service support."
+            },
+            {
+                "brand": "Honda",
+                "model": "City",
+                "year": 2020,
+                "price": 850000,
+                "score": 85,
+                "safety_stars": None,
+                "segment": "SEDAN",
+                "advantage": "Class-leading 506-litre boot capacity, plush rear-seat knee room, and refined 1.5L i-VTEC engine."
+            },
+            {
+                "brand": "Hyundai",
+                "model": "Verna",
+                "year": 2020,
+                "price": 840000,
+                "score": 82,
+                "safety_stars": None,
+                "segment": "SEDAN",
+                "advantage": "Feature-packed cabin, smooth ride comfort, and well-insulated highway NVH dynamics."
+            },
+            {
+                "brand": "Volkswagen",
+                "model": "Virtus",
+                "year": 2022,
+                "price": 1050000,
+                "score": 86,
+                "safety_stars": 5,
+                "segment": "SEDAN",
+                "advantage": "Dual 5-Star Global NCAP safety (adult & child), 521-litre boot, and rock-solid high-speed chassis dynamics."
             },
             {
                 "brand": "Maruti",
@@ -402,7 +446,17 @@ class RecommendationService:
                 "score": 79,
                 "safety_stars": 2,
                 "segment": "HATCHBACK",
-                "advantage": "Industry-leading fuel economy, lowest maintenance parts basket, and exceptional resale liquidity."
+                "advantage": "Industry-leading 22.4 km/l fuel economy, ultra-low spare parts costs, and top resale turnover velocity."
+            },
+            {
+                "brand": "Tata",
+                "model": "Punch",
+                "year": 2021,
+                "price": 620000,
+                "score": 82,
+                "safety_stars": 5,
+                "segment": "MICRO_SUV",
+                "advantage": "5-Star Global NCAP crash safety, upright commanding seating position, and 187 mm ground clearance."
             },
             {
                 "brand": "Mahindra",
@@ -412,7 +466,7 @@ class RecommendationService:
                 "score": 77,
                 "safety_stars": 4,
                 "segment": "LIFESTYLE_SUV",
-                "advantage": "Dedicated mechanical 4x4 capability with verified 4-Star Global NCAP crashworthiness."
+                "advantage": "Dedicated mechanical 4x4 transfer case with verified 4-Star Global NCAP crashworthiness."
             }
         ]
 
@@ -426,7 +480,7 @@ class RecommendationService:
 
             rationale = ""
             # Why suggest?
-            if user_profile.safety_priority in ("HIGH", "CRITICAL") and cand["safety_stars"] >= 4:
+            if user_profile.safety_priority in ("HIGH", "CRITICAL") and cand.get("safety_stars") and cand["safety_stars"] >= 4:
                 rationale = f"Recommended because it delivers a {cand['safety_stars']}-Star verified Global NCAP rating within your budget."
             elif user_profile.maintenance_priority == "HIGH" and cand["brand"] == "Maruti":
                 rationale = "Recommended for lowest total cost of ownership and 4,000+ service center accessibility."
