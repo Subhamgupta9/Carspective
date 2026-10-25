@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../state/AppContext';
 import { assistantApi } from '../../api/assistantApi';
-import { AssistantResponse, AssistantEvidenceCitation } from '../../types';
+import { AssistantRequest, AssistantResponse, AssistantEvidenceCitation } from '../../types';
 import { Button } from '../../components/common/Button';
 import { EvidenceBadge } from '../../components/common/EvidenceBadge';
 import {
@@ -70,36 +70,49 @@ export const AssistantDrawer: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const res: AssistantResponse = await assistantApi.askAssistant({
-        query: text,
-        context_vehicle: currentVehicle
+      const payload: AssistantRequest = {
+        message: text,
+        vehicle: currentVehicle
           ? {
-              canonical_id: currentVehicle.canonical_id,
               brand: currentVehicle.brand,
               model: currentVehicle.model,
-              year: currentVehicle.year,
-              asking_price: currentVehicle.asking_price,
+              manufacturing_year: currentVehicle.year,
+              variant: currentVehicle.variant,
+              fuel_type: currentVehicle.fuel_type || 'Petrol',
+              transmission_type: currentVehicle.transmission_type || 'Manual',
               km_driven: currentVehicle.km_driven,
+              canonical_vehicle_id: currentVehicle.canonical_id,
             }
           : undefined,
-      });
+        listing: currentVehicle?.asking_price
+          ? {
+              asking_price: currentVehicle.asking_price,
+            }
+          : undefined,
+      };
+
+      const res: AssistantResponse = await assistantApi.askAssistant(payload);
+      const items = res.evidence_bundle || res.citations || [];
 
       const assistantTurn: ChatTurn = {
         role: 'assistant',
         content: res.answer,
-        citations: res.citations,
+        citations: items,
         nextActions: res.suggested_next_actions,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
       setMessages(prev => [...prev, assistantTurn]);
     } catch (err: any) {
+      const errorMsg =
+        err?.detail ||
+        err?.message ||
+        'I encountered an issue querying the automotive intelligence engines. Please check the vehicle valuation or checklist directly.';
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content:
-            'I encountered an issue querying the automotive intelligence engines. Please check the vehicle valuation or checklist directly.',
+          content: errorMsg,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -240,7 +253,7 @@ export const AssistantDrawer: React.FC = () => {
                     {turn.citations.map((c, idx) => (
                       <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: '0.75rem' }}>
                         <EvidenceBadge state={c.evidence_state} size="sm" />
-                        <span style={{ color: 'var(--text-secondary)' }}>{c.title}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>{c.claim || c.title || c.id}</span>
                       </div>
                     ))}
                   </div>

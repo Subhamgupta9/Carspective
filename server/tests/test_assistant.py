@@ -437,3 +437,103 @@ def test_api_post_assistant_validation_error(client):
 def test_api_post_assistant_non_json_error(client):
     resp = client.post("/api/v1/assistant", data="plain text message", content_type="text/plain")
     assert resp.status_code == 415
+
+
+def test_api_post_assistant_legacy_query_payload_success(client):
+    payload = {
+        "query": "Is the asking price fair?",
+        "context_vehicle": {
+            "brand": "Honda",
+            "model": "City",
+            "year": 2020,
+            "fuel_type": "Petrol",
+            "transmission_type": "Manual",
+            "asking_price": 850000,
+            "km_driven": 40000,
+        }
+    }
+    resp = client.post("/api/v1/assistant", json=payload)
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "session_id" in data
+    assert "answer" in data
+    assert data["intent"] == "DEAL_ANALYSIS"
+    assert "DEAL_ANALYZER" in data["referenced_domains"]
+    # Check backward compatibility fields
+    assert "citations" in data
+    assert len(data["citations"]) > 0
+    assert "source_domains_queried" in data
+    assert "DEAL_ANALYZER" in data["source_domains_queried"]
+
+
+def test_api_post_assistant_vehicle_and_listing_payload_success(client):
+    payload = {
+        "message": "Is this asking price a good deal?",
+        "vehicle": {
+            "brand": "Honda",
+            "model": "City",
+            "manufacturing_year": 2020,
+            "fuel_type": "Petrol",
+            "transmission_type": "Manual",
+            "km_driven": 40000,
+            "canonical_vehicle_id": "honda-city-2020",
+        },
+        "listing": {
+            "asking_price": 850000,
+        }
+    }
+    resp = client.post("/api/v1/assistant", json=payload)
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "session_id" in data
+    assert "answer" in data
+    assert data["intent"] == "DEAL_ANALYSIS"
+    assert len(data["evidence_bundle"]) > 0
+    assert len(data["citations"]) == len(data["evidence_bundle"])
+
+
+def test_assistant_request_legacy_payload_immutability_and_nulls():
+    caller_dict = {
+        "query": "Is this a good deal?",
+        "context_vehicle": {
+            "brand": "Honda",
+            "model": "City",
+            "year": 2020,
+            "asking_price": 850000,
+        },
+        "comparison_vehicles": [
+            {"brand": "Hyundai", "model": "Verna", "year": 2019}
+        ]
+    }
+    req = AssistantRequest.model_validate(caller_dict)
+
+    # Immutability: caller_dict must NOT have been mutated in place
+    assert "message" not in caller_dict
+    assert "vehicle" not in caller_dict
+    assert "compared_vehicles" not in caller_dict
+    assert "listing" not in caller_dict
+
+    # Validated model properties
+    assert req.message == "Is this a good deal?"
+    assert req.vehicle is not None
+    assert req.vehicle.brand == "Honda"
+    assert req.vehicle.manufacturing_year == 2020
+    assert req.listing is not None
+    assert req.listing.asking_price == 850000.0
+    assert req.compared_vehicles is not None
+    assert len(req.compared_vehicles) == 1
+    assert req.compared_vehicles[0].brand == "Hyundai"
+
+    # Null safety: ensure explicit None values do not crash validator
+    req_nulls = AssistantRequest.model_validate({
+        "message": None,
+        "query": "Fallback question",
+        "context_vehicle": None,
+        "comparison_vehicles": None,
+        "vehicle": None,
+        "listing": None,
+    })
+    assert req_nulls.message == "Fallback question"
+    assert req_nulls.vehicle is None
+    assert req_nulls.compared_vehicles is None
+    assert req_nulls.listing is None

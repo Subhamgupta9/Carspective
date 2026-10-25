@@ -7,7 +7,7 @@ assistant contexts, session turns, request/response contracts, and domain author
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, computed_field
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -199,6 +199,74 @@ class AssistantRequest(BaseModel):
         description="Optional client-provided conversation history"
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def handle_legacy_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Create a shallow copy so caller-owned dictionaries are never mutated
+            data = dict(data)
+
+            # 1. Map legacy 'query' to 'message' if 'message' is absent or None
+            if not data.get("message") and data.get("query"):
+                data["message"] = data["query"]
+
+            # 2. Map legacy 'context_vehicle' to 'vehicle' and 'listing' if absent or None
+            if not data.get("vehicle") and data.get("context_vehicle"):
+                cv = data.get("context_vehicle")
+                if isinstance(cv, dict):
+                    v_dict = {}
+                    if cv.get("brand"):
+                        v_dict["brand"] = cv["brand"]
+                    if cv.get("model"):
+                        v_dict["model"] = cv["model"]
+                    if cv.get("year") and not cv.get("manufacturing_year"):
+                        v_dict["manufacturing_year"] = cv["year"]
+                    elif cv.get("manufacturing_year"):
+                        v_dict["manufacturing_year"] = cv["manufacturing_year"]
+                    if cv.get("variant"):
+                        v_dict["variant"] = cv["variant"]
+                    if cv.get("fuel_type"):
+                        v_dict["fuel_type"] = cv["fuel_type"]
+                    if cv.get("transmission_type"):
+                        v_dict["transmission_type"] = cv["transmission_type"]
+                    if cv.get("km_driven") is not None:
+                        v_dict["km_driven"] = cv["km_driven"]
+                    if cv.get("canonical_id") and not cv.get("canonical_vehicle_id"):
+                        v_dict["canonical_vehicle_id"] = cv["canonical_id"]
+                    elif cv.get("canonical_vehicle_id"):
+                        v_dict["canonical_vehicle_id"] = cv["canonical_vehicle_id"]
+
+                    if v_dict.get("brand") and v_dict.get("model"):
+                        data["vehicle"] = v_dict
+
+                    if cv.get("asking_price") is not None and not data.get("listing"):
+                        try:
+                            data["listing"] = {"asking_price": float(cv["asking_price"])}
+                        except (ValueError, TypeError):
+                            pass
+
+            # 3. Map legacy 'comparison_vehicles' to 'compared_vehicles' if absent or None
+            if not data.get("compared_vehicles") and data.get("comparison_vehicles"):
+                cv_list = data.get("comparison_vehicles")
+                if isinstance(cv_list, list):
+                    mapped_list = []
+                    for cv in cv_list:
+                        if isinstance(cv, dict) and cv.get("brand") and cv.get("model"):
+                            mapped_list.append({
+                                "brand": cv["brand"],
+                                "model": cv["model"],
+                                "manufacturing_year": cv.get("manufacturing_year") or cv.get("year"),
+                                "variant": cv.get("variant"),
+                                "fuel_type": cv.get("fuel_type") or "Petrol",
+                                "transmission_type": cv.get("transmission_type") or "Manual",
+                                "km_driven": cv.get("km_driven"),
+                                "canonical_vehicle_id": cv.get("canonical_id") or cv.get("canonical_vehicle_id"),
+                            })
+                    if mapped_list:
+                        data["compared_vehicles"] = mapped_list
+
+        return data
+
 
 class AssistantResponse(BaseModel):
     """Authoritative, evidence-grounded response from CarSpective Assistant."""
@@ -227,3 +295,15 @@ class AssistantResponse(BaseModel):
         "The CarSpective AI Assistant is an evidence-constrained automotive explainer. It does not independently calculate valuation, scores, recommendations, comparisons, or inspection conclusions.",
         description="Standard CarSpective governance disclaimer"
     )
+
+    @computed_field
+    @property
+    def citations(self) -> List[EvidenceItem]:
+        """Backward-compatibility alias for evidence_bundle."""
+        return self.evidence_bundle
+
+    @computed_field
+    @property
+    def source_domains_queried(self) -> List[str]:
+        """Backward-compatibility alias for referenced_domains."""
+        return self.referenced_domains

@@ -477,12 +477,41 @@ export interface InspectionEvaluationResponse {
 // 8. Grounded AI Assistant Types (Phase 8)
 // ==========================================
 
-export interface AssistantEvidenceCitation {
+export interface AssistantEvidenceItem {
   id: string;
-  title: string;
-  source_domain: string;
+  claim: string;
+  value?: any;
+  source: string;
   evidence_state: string;
-  summary: string;
+  domain: string;
+  confidence?: string;
+  applicability?: string;
+  notes?: string;
+  // Legacy aliases
+  title?: string;
+  summary?: string;
+  source_domain?: string;
+}
+
+export interface AssistantEvidenceCitation extends AssistantEvidenceItem {}
+
+export interface AssistantVehicleInput {
+  brand: string;
+  model: string;
+  manufacturing_year?: number;
+  variant?: string;
+  fuel_type?: string;
+  transmission_type?: string;
+  city?: string;
+  km_driven?: number;
+  number_of_owners?: number;
+  canonical_vehicle_id?: string;
+}
+
+export interface AssistantListingInput {
+  asking_price?: number;
+  negotiable?: boolean;
+  seller_type?: string;
 }
 
 export interface AssistantContextVehicle {
@@ -495,21 +524,33 @@ export interface AssistantContextVehicle {
 }
 
 export interface AssistantRequest {
-  query: string;
+  message: string;
+  vehicle?: AssistantVehicleInput;
+  listing?: AssistantListingInput;
+  compared_vehicles?: AssistantVehicleInput[];
+  session_id?: string;
+  // Legacy compatibility fields
+  query?: string;
   context_vehicle?: AssistantContextVehicle;
   comparison_vehicles?: AssistantContextVehicle[];
-  session_id?: string;
 }
 
 export interface AssistantResponse {
+  session_id: string;
   answer: string;
   intent: string;
-  source_domains_queried: string[];
-  citations: AssistantEvidenceCitation[];
+  referenced_domains: string[];
+  evidence_refs: string[];
+  evidence_bundle: AssistantEvidenceItem[];
   suggested_next_actions: string[];
-  limitations_noted: string[];
-  session_id: string;
-  turn_timestamp: string;
+  uncertainty?: string;
+  disclaimer?: string;
+  session_context_updates?: Record<string, any>;
+  // Legacy and computed aliases
+  citations?: AssistantEvidenceItem[];
+  source_domains_queried?: string[];
+  limitations_noted?: string[];
+  turn_timestamp?: string;
 }
 
 // ==========================================
