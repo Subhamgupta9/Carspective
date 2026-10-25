@@ -180,6 +180,7 @@ export const VehiclePage: React.FC<VehiclePageProps> = ({ vehicleId, onNavigate 
         asking_price: newPrice,
         fuel_type: workspace.identity.fuel_type,
         transmission_type: workspace.identity.transmission_type,
+        bodytype: workspace.identity.body_type,
         variant: workspace.identity.variant,
       });
       setDealAnalysis(dealRes);

@@ -697,6 +697,7 @@ class DecisionService:
                 variant=variant,
                 fuel_type=specs.fuel_type if specs else "Petrol",
                 transmission_type=specs.transmission if specs else "Manual",
+                bodytype=prof.body_type if prof else None,
                 asking_price=asking_price,
             )
             deal_res = self.deal_service.analyze_deal(deal_req)

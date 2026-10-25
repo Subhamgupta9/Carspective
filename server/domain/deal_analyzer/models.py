@@ -63,7 +63,7 @@ class DealAnalysisRequest(BaseModel):
     fuel_type: Optional[str] = Field("Petrol", description="Fuel type (Petrol, Diesel, CNG, Electric)")
     transmission_type: Optional[str] = Field("Manual", description="Transmission type (Manual, Automatic)")
     city: Optional[str] = Field("Delhi", description="City of registration / sale")
-    bodytype: Optional[str] = Field("Hatchback", description="Vehicle body type")
+    bodytype: Optional[str] = Field(None, description="Vehicle body type")
     variant: Optional[str] = Field(None, description="Specific vehicle variant if known (e.g. VXi, SX Option)")
     
     # Optional condition & provenance parameters

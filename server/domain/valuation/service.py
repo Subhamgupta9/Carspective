@@ -211,13 +211,18 @@ class ValuationService:
         log_km_driven = float(np.log1p(req.km_driven))
         
         # Categorical feature resolution with immutable preprocessing result reuse
+        effective_bodytype = req.bodytype
+        if not effective_bodytype and tax_res and tax_res.hierarchy:
+            effective_bodytype = tax_res.hierarchy.get("model", {}).get("body_type")
+        effective_bodytype = effective_bodytype or "Hatchback"
+
         cat_key = (
             str(req.model).strip(),
             str(req.fuel_type or "Petrol").strip(),
             str(req.transmission_type or "Manual").strip(),
             str(req.brand).strip(),
             str(req.city or "Delhi").strip(),
-            str(req.bodytype or "Hatchback").strip(),
+            str(effective_bodytype).strip(),
         )
 
         cached_x_cat = self._cat_prep_cache.get(cat_key)

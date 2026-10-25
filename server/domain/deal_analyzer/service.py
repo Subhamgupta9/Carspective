@@ -65,10 +65,14 @@ class DealAnalyzerService:
         else:
             self.valuation_service = valuation_service
 
-    def analyze_deal(self, req: DealAnalysisRequest) -> DealAnalysisResponse:
+    def analyze_deal(
+        self,
+        req: DealAnalysisRequest,
+        valuation_response: Optional[ValuationResponse] = None,
+    ) -> DealAnalysisResponse:
         """
         Executes complete deal analysis:
-        1. Calls Phase 3 Valuation Service (asking price strictly isolated)
+        1. Calls Phase 3 Valuation Service (asking price strictly isolated) or reuses pre-computed valuation
         2. Calculates absolute and relative price deviations
         3. Evaluates position within calibrated 80% conformal range
         4. Detects statistical price anomalies using empirical ratio & robust z-score
@@ -79,22 +83,25 @@ class DealAnalyzerService:
         """
         start_time = time.perf_counter()
         
-        # Step 1: Forward request to Phase 3 Valuation Service
+        # Step 1: Forward request to Phase 3 Valuation Service (or reuse pre-evaluated valuation)
         # Asking price is passed for audit metadata but strictly ignored by the ML pipeline
-        val_req = ValuationRequest(
-            brand=req.brand,
-            model=req.model,
-            manufacturing_year=req.manufacturing_year,
-            km_driven=req.km_driven,
-            fuel_type=req.fuel_type or "Petrol",
-            transmission_type=req.transmission_type or "Manual",
-            city=req.city or "Delhi",
-            bodytype=req.bodytype or "Hatchback",
-            number_of_owners=req.number_of_owners or 1,
-            variant=req.variant,
-            asking_price=req.asking_price
-        )
-        val_res: ValuationResponse = self.valuation_service.evaluate_valuation(val_req)
+        if valuation_response is not None:
+            val_res: ValuationResponse = valuation_response
+        else:
+            val_req = ValuationRequest(
+                brand=req.brand,
+                model=req.model,
+                manufacturing_year=req.manufacturing_year,
+                km_driven=req.km_driven,
+                fuel_type=req.fuel_type or "Petrol",
+                transmission_type=req.transmission_type or "Manual",
+                city=req.city or "Delhi",
+                bodytype=req.bodytype,
+                number_of_owners=req.number_of_owners or 1,
+                variant=req.variant,
+                asking_price=req.asking_price,
+            )
+            val_res = self.valuation_service.evaluate_valuation(val_req)
         
         ask_price = int(round(req.asking_price))
         vehicle_summary = (
@@ -349,6 +356,8 @@ class DealAnalyzerService:
         if deal_quality == DealQualityEnum.OVERPRICED:
             # Overpriced: aim for fair baseline, range between baseline and lower portion of ask
             target = round_negotiation_currency(int_fair_value)
+            if target > int_fair_value:
+                target = max(0, target - 1000)
             t_low = round_negotiation_currency(max(lower_bound, int_fair_value * 0.95))
             t_high = round_negotiation_currency(min(ask_price, upper_bound))
             

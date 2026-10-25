@@ -219,8 +219,9 @@ export const LiveMarketEvidenceSection: React.FC<LiveMarketEvidenceSectionProps>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <span style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)' }}>
-                {comparison_with_historical.price_shift_percentage > 0 ? '+' : ''}
-                {comparison_with_historical.price_shift_percentage.toFixed(1)}%
+                {comparison_with_historical.price_shift_percentage != null
+                  ? `${comparison_with_historical.price_shift_percentage > 0 ? '+' : ''}${comparison_with_historical.price_shift_percentage.toFixed(1)}%`
+                  : '—'}
               </span>
               {comparison_with_historical.price_trend_direction === 'INCREASING' && (
                 <TrendingUp size={18} style={{ color: '#EF4444' }} />
@@ -230,7 +231,7 @@ export const LiveMarketEvidenceSection: React.FC<LiveMarketEvidenceSectionProps>
               )}
             </div>
             <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', marginTop: 'var(--space-1)' }}>
-              Historical: {formatLakhs(comparison_with_historical.historical_median_asking_price)} &rarr; Current: {formatLakhs(comparison_with_historical.current_median_asking_price)}
+              Historical: {formatLakhs(comparison_with_historical.historical_median_asking_price ?? comparison_with_historical.historical_median_asking_price_inr)} &rarr; Current: {formatLakhs(comparison_with_historical.current_median_asking_price ?? comparison_with_historical.current_median_asking_price_inr)}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 'var(--space-1)' }}>
               Historical sample: {comparison_with_historical.historical_sample_size != null ? comparison_with_historical.historical_sample_size.toLocaleString() : '—'} listings
@@ -256,27 +257,36 @@ export const LiveMarketEvidenceSection: React.FC<LiveMarketEvidenceSectionProps>
               gap: 'var(--space-3)',
             }}
           >
-            {regional_breakdown.map((r) => (
-              <div
-                key={r.region}
-                style={{
-                  backgroundColor: 'var(--bg-tertiary)',
-                  padding: 'var(--space-3)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
-                <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>
-                  {r.region}
+            {regional_breakdown.map((r, idx) => {
+              const regionName = r.region || r.region_name || `Cluster ${idx + 1}`;
+              const medianPrice = r.median_asking_price ?? r.median_asking_price_inr;
+              const sharePercent = r.share_percentage != null
+                ? `${r.share_percentage.toFixed(0)}% share`
+                : (supply?.total_observations && r.observation_count != null
+                  ? `${Math.round((r.observation_count / supply.total_observations) * 100)}% share`
+                  : null);
+              return (
+                <div
+                  key={regionName}
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    padding: 'var(--space-3)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>
+                    {regionName}
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)', marginTop: '2px' }}>
+                    {formatLakhs(medianPrice)}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {r.observation_count} listings{sharePercent ? ` (${sharePercent})` : ''}
+                  </div>
                 </div>
-                <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)', marginTop: '2px' }}>
-                  {formatLakhs(r.median_asking_price)}
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  {r.observation_count} listings ({r.share_percentage.toFixed(0)}% share)
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

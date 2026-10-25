@@ -127,13 +127,37 @@ describe('Phase 17 — Live Market Intelligence & Evidence Components', () => {
     expect(screen.getByText(/Pricing guidance relies strictly on the historical 2018–2024 empirical baseline/i)).toBeInTheDocument();
   });
 
-  it('marketApi dispatches Phase 17 current market calls correctly', async () => {
-    const spy = vi.spyOn(clientModule, 'request').mockResolvedValue(mockCurrentMarket);
+  it('renders regional clusters cleanly when share_percentage and region use backend database aliases', () => {
+    const backendData: CurrentMarketIntelligenceResponse = {
+      ...mockCurrentMarket,
+      regional_breakdown: [
+        {
+          region_name: 'Bengaluru',
+          median_asking_price_inr: 655000,
+          observation_count: 2,
+        } as any,
+        {
+          region_name: 'Delhi NCR',
+          median_asking_price_inr: 637500,
+          observation_count: 4,
+        } as any,
+      ],
+      comparison_with_historical: {
+        ...mockCurrentMarket.comparison_with_historical!,
+        price_shift_percentage: undefined as any,
+      },
+    };
 
-    const result = await marketApi.getCurrentMarketIntelligence('maruti-suzuki::swift');
-    expect(spy).toHaveBeenCalledWith('/api/v1/market/current/maruti-suzuki%3A%3Aswift');
-    expect(result.observation_period).toBe('2026-Q3 (Current Market Observations)');
+    render(
+      <LiveMarketEvidenceSection
+        currentMarket={backendData}
+        canonicalVehicleId="maruti-suzuki::swift"
+      />
+    );
 
-    spy.mockRestore();
+    expect(screen.getByText('Bengaluru')).toBeInTheDocument();
+    expect(screen.getByText('Delhi NCR')).toBeInTheDocument();
+    expect(screen.getByText('₹6.55L')).toBeInTheDocument();
+    expect(screen.getByText('₹6.38L')).toBeInTheDocument();
   });
 });

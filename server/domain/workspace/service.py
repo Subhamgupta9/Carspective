@@ -306,10 +306,11 @@ class VehicleWorkspaceService:
                 asking_price=asking_price,
                 fuel_type=vehicle_identity.fuel_type,
                 transmission_type=vehicle_identity.transmission_type,
+                bodytype=vehicle_identity.body_type,
                 city="Delhi",
                 variant=vehicle_identity.variant,
             )
-            deal_res = self.deal_service.analyze_deal(deal_req)
+            deal_res = self.deal_service.analyze_deal(deal_req, valuation_response=val_res)
 
         # 8. Intrinsic CarSpective Score (Phase 5) — Strictly Isolated from Asking Price
         score_req = ScoreRequest(

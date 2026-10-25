@@ -1420,22 +1420,30 @@ export interface CurrentMarketSupply {
 }
 
 export interface CurrentRegionalIntelligence {
-  region: string;
+  region?: string;
+  region_name?: string;
   city?: string;
   observation_count: number;
-  share_percentage: number;
-  median_asking_price: number;
+  share_percentage?: number;
+  median_asking_price?: number;
+  median_asking_price_inr?: number;
+  iqr_low_inr?: number;
+  iqr_high_inr?: number;
+  median_mileage_km?: number;
+  coverage_disclaimer?: string;
 }
 
 export interface CurrentVsHistoricalComparison {
   canonical_vehicle_id: string;
-  historical_sample_size: number;
-  historical_median_asking_price: number;
-  current_sample_size: number;
-  current_median_asking_price: number;
-  price_shift_percentage: number;
+  historical_sample_size?: number;
+  historical_median_asking_price?: number;
+  historical_median_asking_price_inr?: number;
+  current_sample_size?: number;
+  current_median_asking_price?: number;
+  current_median_asking_price_inr?: number;
+  price_shift_percentage?: number;
   price_trend_direction: 'INCREASING' | 'STABLE' | 'DECREASING' | 'INSUFFICIENT_DATA';
-  commentary: string;
+  commentary?: string;
 }
 
 export interface CurrentMarketEvidence {

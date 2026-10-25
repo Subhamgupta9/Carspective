@@ -17,7 +17,7 @@ class ValuationRequest(BaseModel):
     fuel_type: Optional[str] = Field("Petrol", description="Fuel type (Petrol, Diesel, CNG, Electric)")
     transmission_type: Optional[str] = Field("Manual", description="Transmission type (Manual, Automatic)")
     city: Optional[str] = Field("Delhi", description="City of registration / sale")
-    bodytype: Optional[str] = Field("Hatchback", description="Vehicle body type")
+    bodytype: Optional[str] = Field(None, description="Vehicle body type")
     number_of_owners: Optional[int] = Field(1, ge=1, le=10, description="Previous owner count")
     variant: Optional[str] = Field(None, description="Specific vehicle variant if known (e.g. VXi, XZ Plus)")
     

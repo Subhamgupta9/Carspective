@@ -234,3 +234,32 @@ def test_workspace_performance_sla(workspace_service: VehicleWorkspaceService):
     # All 6 domain engines synthesized in-memory
     assert p50 < 500.0, f"Workspace p50 {p50:.2f} ms exceeded 500ms budget"
     assert p95 < 1000.0, f"Workspace p95 {p95:.2f} ms exceeded 1000ms budget"
+
+
+def test_workspace_valuation_deal_analyzer_consistency_honda_city(app_client: FlaskClient, workspace_service: VehicleWorkspaceService):
+    """
+    Regression test for Honda City valuation consistency:
+    Verifies that the estimated fair market value in the primary valuation engine
+    and the baseline valuation in the Deal Analyzer match exactly and reflect the
+    canonical Sedan body type rather than defaulting to Hatchback.
+    """
+    canonical_id = "honda::city::gen-4-2014::2020"
+    asking_price = 850000.0
+    res = workspace_service.get_vehicle_workspace(canonical_id, asking_price=asking_price)
+
+    assert res is not None
+    assert res.identity.body_type == "Sedan"
+    val_fmv = res.valuation.get("estimated_fair_market_value")
+    deal_fmv = res.deal_analysis.get("valuation", {}).get("estimated_fair_market_value")
+    assert val_fmv is not None
+    assert deal_fmv is not None
+    assert val_fmv == deal_fmv, f"Valuation FMV ({val_fmv}) does not match Deal Analyzer baseline ({deal_fmv})"
+
+    # End-to-end HTTP API check
+    resp = app_client.get(f"/api/v1/vehicles/workspace/Honda-City?asking_price=850000&year=2020")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["identity"]["body_type"] == "Sedan"
+    http_val = data["valuation"]["estimated_fair_market_value"]
+    http_deal = data["deal_analysis"]["valuation"]["estimated_fair_market_value"]
+    assert http_val == http_deal
