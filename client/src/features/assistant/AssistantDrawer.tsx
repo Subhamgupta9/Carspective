@@ -123,6 +123,7 @@ export const AssistantDrawer: React.FC = () => {
 
   return (
     <div
+      className="assistant-drawer"
       style={{
         position: 'fixed',
         top: 0,
@@ -199,10 +200,11 @@ export const AssistantDrawer: React.FC = () => {
             alignItems: 'center',
             gap: 'var(--space-2)',
             borderBottom: '1px solid rgba(0, 102, 255, 0.1)',
+            overflow: 'hidden',
           }}
         >
-          <Sparkles size={14} />
-          <span>
+          <Sparkles size={14} style={{ flexShrink: 0 }} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             Active Context: <strong>{currentVehicle.brand} {currentVehicle.model} {currentVehicle.year || ''}</strong>
           </span>
         </div>
@@ -335,6 +337,7 @@ export const AssistantDrawer: React.FC = () => {
             aria-label="Message to CarSpective AI"
             style={{
               flex: 1,
+              minWidth: 0,
               padding: 'var(--space-2) var(--space-3)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-medium)',

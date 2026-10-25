@@ -69,6 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate }) => {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span
+              className="header-brand-title"
               style={{
                 fontSize: 'var(--font-size-xl)',
                 fontWeight: 'var(--font-weight-extrabold)',
@@ -80,6 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate }) => {
               CAR<span style={{ color: 'var(--accent-blue)' }}>spective</span>
             </span>
             <span
+              className="header-brand-subtitle"
               style={{
                 fontSize: '0.65rem',
                 color: 'var(--text-muted)',
@@ -95,11 +97,6 @@ export const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate }) => {
 
         {/* Desktop Navigation Links */}
         <nav
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-1)',
-          }}
           className="desktop-nav"
         >
           {navLinks.map(link => {
@@ -126,15 +123,18 @@ export const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate }) => {
         </nav>
 
         {/* Action Controls: Comparison Tray & Persistent AI Assistant */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           {comparisonVehicles.length > 0 && (
             <Button
               variant="outline"
               size="sm"
               leftIcon={<Scale size={14} />}
               onClick={() => handleNavClick('/compare')}
+              className="header-compare-btn"
+              aria-label={`Compare ${comparisonVehicles.length} vehicles`}
             >
-              Compare ({comparisonVehicles.length})
+              <span className="header-btn-text-full">Compare ({comparisonVehicles.length})</span>
+              <span className="header-btn-text-compact">({comparisonVehicles.length})</span>
             </Button>
           )}
 
@@ -143,8 +143,11 @@ export const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate }) => {
             size="sm"
             leftIcon={<Bot size={14} />}
             onClick={openAssistant}
+            className="header-assistant-btn"
+            aria-label="Ask CarSpective AI Assistant"
           >
-            Ask CarSpective
+            <span className="header-btn-text-full">Ask CarSpective</span>
+            <span className="header-btn-text-compact">Ask AI</span>
           </Button>
 
           {/* Mobile Menu Toggle Button */}
@@ -157,7 +160,6 @@ export const Header: React.FC<HeaderProps> = ({ currentPath, onNavigate }) => {
               borderRadius: 'var(--radius-md)',
               color: 'var(--text-primary)',
               cursor: 'pointer',
-              display: 'none',
             }}
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
